@@ -33,6 +33,7 @@ const (
 	Newline
 	// Interesting things
 	Comment     // A comment
+	Number      // 1234
 	Atom        // athing, or aThing, or 'A Thing'
 	SpecialAtom // ===> <====
 	Variable    // AThing, X
@@ -256,6 +257,8 @@ func lexAny(l *Scanner) stateFn {
 	case r == ',':
 		l.emit(Comma)
 		return lexAny
+	case unicode.IsDigit(r):
+		return lexNumber
 	case unicode.IsLower(r):
 		return lexAtom
 	case unicode.IsUpper(r):
@@ -359,6 +362,22 @@ Loop:
 }
 
 // lexSpecialAtom
+func lexNumber(l *Scanner) stateFn {
+Loop:
+	for {
+		c := l.next()
+		switch {
+		case unicode.IsDigit(c):
+		default:
+			l.backup()
+			break Loop
+		}
+	}
+	l.emit(Number)
+	return lexAny
+}
+
+// lexNumber
 func lexSpecialAtom(l *Scanner) stateFn {
 Loop:
 	for {

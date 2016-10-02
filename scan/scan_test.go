@@ -35,6 +35,7 @@ var tests = []test{
 	{"cluase2", `likes(sam,_).`, []Token{}},
 	{"cluase2", `likes/2(sam,__thing).`, []Token{}},
 	{"cluase4", `likes/2(sam,Thing) :- yummy(Thing).`, []Token{}},
+	{"cluase5", `eatenChocs(tristan,1000000).`, []Token{}},
 }
 
 func TestNew(t *testing.T) {
