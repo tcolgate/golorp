@@ -4,9 +4,9 @@ package scan
 
 import "fmt"
 
-const _Type_name = "EOFErrorNewlineCommentAtomVariableUnderScoreLeftBrackRightBrackEmptyListLeftParenRightParen"
+const _Type_name = "EOFErrorNewlineCommentAtomSpecialAtomVariableUnboundLeftBrackRightBrackEmptyListLeftParenRightParenStopCommaSemiColon"
 
-var _Type_index = [...]uint8{0, 3, 8, 15, 22, 26, 34, 44, 53, 63, 72, 81, 91}
+var _Type_index = [...]uint8{0, 3, 8, 15, 22, 26, 37, 45, 52, 61, 71, 80, 89, 99, 103, 108, 117}
 
 func (i Type) String() string {
 	if i < 0 || i >= Type(len(_Type_index)-1) {
