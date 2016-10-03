@@ -1,18 +1,24 @@
 package golorp
 
+import "math/big"
+
 type Atom string
 
-type Number int64
+type Cell interface{}
 
-type Functor struct {
-	Name  string
-	Arity int
-	Args  []Cell
+type Ref interface {
+	Cell
+	Ptr() Cell
 }
 
-type Cell struct {
-	fun Functor
-	ref Ref
+type Structure interface {
+	Cell
+	Functor() Atom
+	Arity() int
+	Subterms() []Cell
 }
 
-type Ref *Cell
+type Number interface {
+	Cell
+	Value() big.Rat
+}
