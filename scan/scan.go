@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:generate stringer -type Type
-
 package scan
 
 import (
@@ -24,6 +22,7 @@ type Token struct {
 	Text string // The text of this item.
 }
 
+//go:generate stringer -type Type
 // Type identifies the type of lex items.
 type Type int
 
@@ -35,6 +34,7 @@ const (
 	Comment     // A comment
 	Number      // 1234
 	Atom        // athing, or aThing, or 'A Thing'
+	FunctorAtom // athing(, or aThing,( or 'A Thing'(
 	SpecialAtom // ===> <====
 	Variable    // AThing, X
 	Unbound     // _
@@ -339,7 +339,12 @@ Loop:
 			break Loop
 		}
 	}
-	l.emit(Atom)
+	nr := l.peek()
+	if nr == '(' {
+		l.emit(FunctorAtom)
+	} else {
+		l.emit(Atom)
+	}
 	return lexAny
 }
 
@@ -357,7 +362,12 @@ Loop:
 			break Loop
 		}
 	}
-	l.emit(Atom)
+	nr := l.peek()
+	if nr == '(' {
+		l.emit(FunctorAtom)
+	} else {
+		l.emit(Atom)
+	}
 	return lexAny
 }
 
