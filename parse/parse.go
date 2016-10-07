@@ -17,7 +17,7 @@ type Parser struct {
 	peekTok scan.Token
 	curTok  scan.Token // most recent token from scanner
 
-	operators map[string]Op
+	operators OpSet
 }
 
 // NewParser returns a new parser that will read from the scanner.
