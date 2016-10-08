@@ -31,12 +31,37 @@ func (p *Parser) NextTerm() (*Term, error) {
 
 // readTerm reads the next available term, assuming the
 // priority of the current term is prio
-func (p *Parser) readTerm(pri int) (*Term, error) {
+// T: 'var' |
+//    'fun' |
+//    'fun' '(' B ')' |
+//    'fun' T |
+//    T 'fun' |
+//    T 'fun' T |
+//    '(' T ')'
+// B: T | T ',' B
+//
+// T: 'var' |
+//    'atom' |
+//    'fun' '(' B ')' |
+//    'prefixop' T |
+//    T 'postfixop' |
+//    T 'infixop' T |
+//    '(' T ')'
+//    '[]'
+//    '[' L ']'
+// B: T | T ',' B
+func (p Parser) readTerm(pri int) (*Term, error) {
 	for {
 		l := p.next()
 		switch l.Type {
+		case scan.EOF:
+			break
 		case scan.Comment:
 			continue
+		case scan.Stop:
+			return &Term{}, nil
+		case scan.Variable:
+			return &Term{}, nil
 		case scan.Atom:
 			opp, argp, ok := p.operators.Prefix(l.Text)
 			if ok && opp <= pri {
@@ -46,32 +71,52 @@ func (p *Parser) readTerm(pri int) (*Term, error) {
 				}
 			}
 			fallthrough
-		case scan.Variable:
-			return &Term{}, nil
+		case scan.EmptyList:
+		case scan.LeftBrack:
+		case scan.LeftParen:
 		case scan.FunctorAtom:
 			continue
-		case scan.Stop:
-			return &Term{}, nil
+		case scan.Unbound:
+			continue
 		default:
 			return nil, fmt.Errorf("unknown token")
 		}
 	}
+
+	return nil, fmt.Errorf("premaature end of stream")
 }
 
 // readRest reads the remaining terms.
+// restTerm lt ->
+//   postfixTerm restTerm
+//   infixTerm term restTerm
 func (p *Parser) readRest(lpri, pri int, lt *Term) (*Term, error) {
-Loop:
 	for {
 		l := p.next()
 		switch l.Type {
 		case scan.Comment:
 			continue
-		case scan.Stop:
-			break Loop
+		case scan.Atom:
+			lopp, opp, ropp, ok := p.operators.Infix(l.Text)
+			if pri >= opp && lpri <= lopp {
+				t0, err := p.readTerm(ropp)
+				if err == nil {
+					return p.readRest(opp, pri, t0)
+				}
+			}
+			opp, argp, ok := p.operators.Postfix(l.Text)
+			if ok && opp <= pri && lpri <= argp {
+				t0 := &Term{}
+				return p.readRest(opp, pri, t0)
+			}
 		default:
-			return nil, fmt.Errorf("unknown token")
+			return lt, nil
 		}
 	}
 
 	return nil, io.EOF
+}
+
+func (p *Parser) readListItems() (*Term, error) {
+	return &Term{}, nil
 }

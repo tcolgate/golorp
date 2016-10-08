@@ -49,6 +49,7 @@ var defaultOps = OpSet{
 	"|":                     {XFY: 1100},
 	"->":                    {XFY: 1050},
 	"*->":                   {XFY: 1050},
+	",":                     {XFY: 1000},
 	"*":                     {XFY: 1000, YFX: 400},
 	":=":                    {XFX: 990},
 	"\\+":                   {FY: 900},
@@ -103,22 +104,23 @@ func (os OpSet) lookup(s string) (Op, bool) {
 	return ops, false
 }
 
-func (os OpSet) Infix(s string) (int, int, bool) {
+// Infix returns left, op, and right priorities
+func (os OpSet) Infix(s string) (int, int, int, bool) {
 	o, ok := os.lookup(s)
 	if !ok {
-		return 0, 0, false
+		return 0, 0, 0, false
 	}
 
 	if opp, ok := o[YFX]; ok {
-		return opp, opp - 1, true
+		return opp, opp, opp - 1, true
 	}
 	if opp, ok := o[XFY]; ok {
-		return opp - 1, opp, true
+		return opp - 1, opp, opp, true
 	}
 	if opp, ok := o[XFX]; ok {
-		return opp - 1, opp - 1, true
+		return opp - 1, opp, opp - 1, true
 	}
-	return 0, 0, false
+	return 0, 0, 0, false
 }
 
 func (os OpSet) Prefix(s string) (int, int, bool) {
