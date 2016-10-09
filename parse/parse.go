@@ -15,6 +15,7 @@ package parse
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/tcolgate/golorp/scan"
 )
@@ -33,9 +34,9 @@ type Parser struct {
 	operators OpSet
 }
 
-// NewParser returns a new parser that will read from the scanner.
+// New returns a new parser that will read from the scanner.
 // The context must have have been created by this package's NewContext function.
-func NewParser(fileName string, scanner *scan.Scanner) *Parser {
+func New(fileName string, scanner *scan.Scanner) *Parser {
 	return &Parser{
 		scanner:  scanner,
 		fileName: fileName,
@@ -65,6 +66,7 @@ func (p *Parser) nextErrorOut(errorOut bool) scan.Token {
 		// Show the line number before we hit the newline.
 		p.lineNum = tok.Line
 	}
+	log.Println("token: ", tok)
 	return tok
 }
 

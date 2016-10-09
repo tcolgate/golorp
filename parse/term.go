@@ -15,7 +15,7 @@ package parse
 
 import (
 	"fmt"
-	"io"
+	"log"
 
 	"github.com/tcolgate/golorp/scan"
 )
@@ -26,7 +26,16 @@ type Term struct {
 }
 
 func (p *Parser) NextTerm() (*Term, error) {
-	return nil, io.EOF
+	t, err := p.readTerm(1200)
+	if err != nil {
+		return nil, err
+	}
+
+	nl := p.next()
+	if nl.Type != scan.Stop {
+		return nil, fmt.Errorf("unterminated term")
+	}
+	return t, nil
 }
 
 // readTerm reads the next available term, assuming the
@@ -50,18 +59,23 @@ func (p *Parser) NextTerm() (*Term, error) {
 //    '[]'
 //    '[' L ']'
 // B: T | T ',' B
-func (p Parser) readTerm(pri int) (*Term, error) {
+func (p *Parser) readTerm(pri int) (*Term, error) {
+	log.Println("reading term")
+Loop:
 	for {
 		l := p.next()
 		switch l.Type {
 		case scan.EOF:
-			break
+			break Loop
 		case scan.Comment:
 			continue
-		case scan.Stop:
-			return &Term{}, nil
+
 		case scan.Variable:
-			return &Term{}, nil
+			return p.readRest(0, pri, &Term{})
+
+		case scan.Number:
+			return p.readRest(0, pri, &Term{})
+
 		case scan.Atom:
 			opp, argp, ok := p.operators.Prefix(l.Text)
 			if ok && opp <= pri {
@@ -70,16 +84,46 @@ func (p Parser) readTerm(pri int) (*Term, error) {
 					return p.readRest(opp, pri, t0)
 				}
 			}
-			fallthrough
+
+			return p.readRest(0, pri, &Term{})
+
+		case scan.FunctorAtom:
+			tb := p.next()
+			if tb.Type != scan.LeftParen {
+				panic(fmt.Errorf("functor atom without leftParen should be impossible"))
+			}
+
+			fargs, err := p.readFunctorArgs()
+			if err != nil {
+				return nil, err
+			}
+
+			tb = p.peek()
+			if tb.Type != scan.RightParen {
+				return nil, fmt.Errorf("Unterminated functor arguments")
+			}
+			p.next() // discard ')'
+			fmt.Printf("args: %v", fargs)
+			return p.readRest(0, pri, &Term{})
+
+		case scan.LeftParen:
+			t0, err := p.readTerm(1200)
+			if err != nil {
+				return nil, err
+			}
+
+			t1 := p.peek()
+			if t1.Type != scan.RightParen {
+				return nil, fmt.Errorf("Unterminated right parenthesis")
+			}
+			p.next() // discard ')'
+			return p.readRest(0, pri, t0)
 		case scan.EmptyList:
 		case scan.LeftBrack:
-		case scan.LeftParen:
-		case scan.FunctorAtom:
-			continue
 		case scan.Unbound:
-			continue
+			return p.readRest(0, pri, &Term{})
 		default:
-			return nil, fmt.Errorf("unknown token")
+			return nil, fmt.Errorf("syntax error")
 		}
 	}
 
@@ -91,32 +135,62 @@ func (p Parser) readTerm(pri int) (*Term, error) {
 //   postfixTerm restTerm
 //   infixTerm term restTerm
 func (p *Parser) readRest(lpri, pri int, lt *Term) (*Term, error) {
-	for {
-		l := p.next()
-		switch l.Type {
-		case scan.Comment:
-			continue
-		case scan.Atom:
-			lopp, opp, ropp, ok := p.operators.Infix(l.Text)
-			if pri >= opp && lpri <= lopp {
-				t0, err := p.readTerm(ropp)
-				if err == nil {
-					return p.readRest(opp, pri, t0)
-				}
+	l := p.peek()
+	switch l.Type {
+	case scan.Atom, scan.Comma:
+		loppri, oppri, roppri, ok := p.operators.Infix(l.Text)
+		if ok && pri >= oppri && lpri <= loppri {
+			log.Printf("INFIX %#v %#v %#v %#v %#v", l.Text, lpri, pri, oppri, loppri)
+			p.next() // consume the token
+			t0, err := p.readTerm(roppri)
+			if err != nil {
+				return nil, err
 			}
-			opp, argp, ok := p.operators.Postfix(l.Text)
-			if ok && opp <= pri && lpri <= argp {
-				t0 := &Term{}
-				return p.readRest(opp, pri, t0)
-			}
-		default:
-			return lt, nil
+			return p.readRest(oppri, pri, t0)
+		}
+		opppri, argpri, ok := p.operators.Postfix(l.Text)
+		if ok && opppri <= pri && lpri <= argpri {
+			log.Printf("POSTFIX %#v %#v %#v %#v %#v", l.Text, lpri, pri, oppri, loppri)
+			p.next() // consume the token
+			t0 := &Term{}
+			return p.readRest(opppri, pri, t0)
 		}
 	}
-
-	return nil, io.EOF
+	return lt, nil
 }
 
 func (p *Parser) readListItems() (*Term, error) {
 	return &Term{}, nil
+}
+
+func (p *Parser) readFunctorArgs() ([]*Term, error) {
+	log.Println("Reading args")
+	fargs := []*Term{}
+
+	for {
+		lt := p.peek()
+		if lt.Type == scan.RightParen {
+			break
+		}
+		log.Println("Reading arg")
+
+		t, err := p.readTerm(999)
+		if err != nil {
+			log.Println("Got error from readTerm")
+			return nil, err
+		}
+		fargs = append(fargs, t)
+		lt = p.peek()
+		log.Printf("peeked %#v\n", lt)
+		if lt.Type == scan.RightParen {
+			break
+		}
+		if lt.Type != scan.Comma {
+			return nil, fmt.Errorf("invalid functor arguments, tok %#v", lt)
+		}
+		// discard comma
+		p.next()
+	}
+
+	return fargs, nil
 }
