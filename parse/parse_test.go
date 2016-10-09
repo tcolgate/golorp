@@ -35,8 +35,9 @@ var tests = []test{
 	{"clause3", `likes(sam,orange).`, []Term{}},
 	{"clause4", `likes(sam,_).`, []Term{}},
 	{"clause5", `likes/2(sam,__thing).`, []Term{}},
-	//{"clause6", `likes/2(sam,Thing) :- yummy(Thing).`, []Term{}},
+	{"clause6", `likes/2(sam,Thing) :- yummy(Thing).`, []Term{}},
 	{"clause7", `eatenChocs(tristan,1000000).`, []Term{}},
+	{"clause8", `eatenChocs(tristan + 4,1000000).`, []Term{}},
 }
 
 func TestNew(t *testing.T) {
@@ -48,14 +49,9 @@ func TestNew(t *testing.T) {
 			s := scan.New(ctx, "file.pl", bytes.NewBuffer([]byte(st.src)))
 			p := New("file.pl", s)
 
-			for {
-				t, err := p.NextTerm()
-				log.Println(t)
-				log.Println(err)
-				if err != nil {
-					break
-				}
-			}
+			t0, err := p.NextTerm()
+			log.Println("Read term ", t0)
+			log.Println("Got err ", err)
 		})
 	}
 }

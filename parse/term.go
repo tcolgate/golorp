@@ -103,7 +103,7 @@ Loop:
 				return nil, fmt.Errorf("Unterminated functor arguments")
 			}
 			p.next() // discard ')'
-			fmt.Printf("args: %v", fargs)
+			log.Printf("args: %v", fargs)
 			return p.readRest(0, pri, &Term{})
 
 		case scan.LeftParen:
