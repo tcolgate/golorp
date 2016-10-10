@@ -76,7 +76,7 @@ Loop:
 		case scan.Number:
 			return p.readRest(0, pri, &Term{})
 
-		case scan.Atom:
+		case scan.Atom, scan.SpecialAtom, scan.Comma:
 			opp, argp, ok := p.operators.Prefix(l.Text)
 			if ok && opp <= pri {
 				t0, err := p.readTerm(argp)
@@ -137,7 +137,7 @@ Loop:
 func (p *Parser) readRest(lpri, pri int, lt *Term) (*Term, error) {
 	l := p.peek()
 	switch l.Type {
-	case scan.Atom, scan.Comma:
+	case scan.Atom, scan.Comma, scan.SpecialAtom:
 		loppri, oppri, roppri, ok := p.operators.Infix(l.Text)
 		if ok && pri >= oppri && lpri <= loppri {
 			log.Printf("INFIX %#v %#v %#v %#v %#v", l.Text, lpri, pri, oppri, loppri)

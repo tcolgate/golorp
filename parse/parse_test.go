@@ -30,6 +30,8 @@ type test struct {
 
 var tests = []test{
 	{"clause0", `likes.`, []Term{}},
+	{"clause0", `1 + 2.`, []Term{}},
+	{"clause0", `-2.`, []Term{}},
 	{"clause1", `likes(sam).`, []Term{}},
 	{"clause2", `likes(sam,Food).`, []Term{}},
 	{"clause3", `likes(sam,orange).`, []Term{}},
