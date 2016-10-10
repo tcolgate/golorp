@@ -32,6 +32,7 @@ type test struct {
 var tests = []test{
 	{"clause0", `likes.`, []term.Term{}},
 	{"clause1", `1 + 2.`, []term.Term{}},
+	{"clause1", `2 / 3.`, []term.Term{}},
 	{"clause2", `print(1 + 2 + 3 + 4 + 5).`, []term.Term{}},
 	{"clause2", `1 + (2 * 3).`, []term.Term{}},
 	{"clause3", `-2.`, []term.Term{}},

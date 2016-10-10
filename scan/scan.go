@@ -242,11 +242,6 @@ func lexAny(l *Scanner) stateFn {
 		return lexAny
 	case r == '%':
 		return lexComment
-	case r == '/':
-		if l.peek() == '*' {
-			return lexBlockComment
-		}
-		fallthrough
 	case isSpace(r):
 		return lexSpace
 	case r == '\'':
@@ -288,6 +283,11 @@ func lexAny(l *Scanner) stateFn {
 			l.emit(Unbound)
 			return lexAny
 		}
+	case r == '/':
+		if l.peek() == '*' {
+			return lexBlockComment
+		}
+		fallthrough
 	case isSpecial(r):
 		l.acceptRun(special)
 		l.emit(SpecialAtom)
