@@ -15,17 +15,15 @@ package parse
 
 import (
 	"fmt"
-	"log"
+	"math/big"
 
 	"github.com/tcolgate/golorp/scan"
+	"github.com/tcolgate/golorp/term"
 )
 
 // This code owes a lot to golog
 
-type Term struct {
-}
-
-func (p *Parser) NextTerm() (*Term, error) {
+func (p *Parser) NextTerm() (term.Term, error) {
 	t, err := p.readTerm(1200)
 	if err != nil {
 		return nil, err
@@ -59,8 +57,7 @@ func (p *Parser) NextTerm() (*Term, error) {
 //    '[]'
 //    '[' L ']'
 // B: T | T ',' B
-func (p *Parser) readTerm(pri int) (*Term, error) {
-	log.Println("reading term")
+func (p *Parser) readTerm(pri int) (term.Term, error) {
 Loop:
 	for {
 		l := p.next()
@@ -71,21 +68,26 @@ Loop:
 			continue
 
 		case scan.Variable:
-			return p.readRest(0, pri, &Term{})
+			return p.readRest(0, pri, term.NewVariable(l.Text))
 
 		case scan.Number:
-			return p.readRest(0, pri, &Term{})
+			f, _, err := big.ParseFloat(l.Text, 10, 1000, big.ToNearestEven)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse number, %s", err)
+			}
+
+			return p.readRest(0, pri, term.NewNumber(f))
 
 		case scan.Atom, scan.SpecialAtom, scan.Comma:
 			opp, argp, ok := p.operators.Prefix(l.Text)
 			if ok && opp <= pri {
 				t0, err := p.readTerm(argp)
 				if err == nil {
-					return p.readRest(opp, pri, t0)
+					return p.readRest(opp, pri, term.NewCallable(l.Text, []term.Term{t0}))
 				}
 			}
 
-			return p.readRest(0, pri, &Term{})
+			return p.readRest(0, pri, term.NewCallable(l.Text, []term.Term{}))
 
 		case scan.FunctorAtom:
 			tb := p.next()
@@ -103,8 +105,7 @@ Loop:
 				return nil, fmt.Errorf("Unterminated functor arguments")
 			}
 			p.next() // discard ')'
-			log.Printf("args: %v", fargs)
-			return p.readRest(0, pri, &Term{})
+			return p.readRest(0, pri, term.NewCallable(l.Text, fargs))
 
 		case scan.LeftParen:
 			t0, err := p.readTerm(1200)
@@ -121,7 +122,7 @@ Loop:
 		case scan.EmptyList:
 		case scan.LeftBrack:
 		case scan.Unbound:
-			return p.readRest(0, pri, &Term{})
+			return p.readRest(0, pri, term.NewVariable(l.Text))
 		default:
 			return nil, fmt.Errorf("syntax error")
 		}
@@ -134,54 +135,47 @@ Loop:
 // restTerm lt ->
 //   postfixTerm restTerm
 //   infixTerm term restTerm
-func (p *Parser) readRest(lpri, pri int, lt *Term) (*Term, error) {
+func (p *Parser) readRest(lpri, pri int, lt term.Term) (term.Term, error) {
 	l := p.peek()
 	switch l.Type {
 	case scan.Atom, scan.Comma, scan.SpecialAtom:
 		loppri, oppri, roppri, ok := p.operators.Infix(l.Text)
 		if ok && pri >= oppri && lpri <= loppri {
-			log.Printf("INFIX %#v %#v %#v %#v %#v", l.Text, lpri, pri, oppri, loppri)
 			p.next() // consume the token
 			t0, err := p.readTerm(roppri)
 			if err != nil {
 				return nil, err
 			}
-			return p.readRest(oppri, pri, t0)
+			return p.readRest(oppri, pri, term.NewCallable(l.Text, []term.Term{lt, t0}))
 		}
-		opppri, argpri, ok := p.operators.Postfix(l.Text)
-		if ok && opppri <= pri && lpri <= argpri {
-			log.Printf("POSTFIX %#v %#v %#v %#v %#v", l.Text, lpri, pri, oppri, loppri)
+		oppri, argpri, ok := p.operators.Postfix(l.Text)
+		if ok && oppri <= pri && lpri <= argpri {
 			p.next() // consume the token
-			t0 := &Term{}
-			return p.readRest(opppri, pri, t0)
+			return p.readRest(oppri, pri, term.NewCallable(l.Text, []term.Term{lt}))
 		}
 	}
 	return lt, nil
 }
 
-func (p *Parser) readListItems() (*Term, error) {
-	return &Term{}, nil
+func (p *Parser) readListItems() (term.Term, error) {
+	return nil, nil
 }
 
-func (p *Parser) readFunctorArgs() ([]*Term, error) {
-	log.Println("Reading args")
-	fargs := []*Term{}
+func (p *Parser) readFunctorArgs() ([]term.Term, error) {
+	fargs := []term.Term{}
 
 	for {
 		lt := p.peek()
 		if lt.Type == scan.RightParen {
 			break
 		}
-		log.Println("Reading arg")
 
 		t, err := p.readTerm(999)
 		if err != nil {
-			log.Println("Got error from readTerm")
 			return nil, err
 		}
 		fargs = append(fargs, t)
 		lt = p.peek()
-		log.Printf("peeked %#v\n", lt)
 		if lt.Type == scan.RightParen {
 			break
 		}

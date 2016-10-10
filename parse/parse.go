@@ -15,7 +15,6 @@ package parse
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/tcolgate/golorp/scan"
 )
@@ -66,7 +65,6 @@ func (p *Parser) nextErrorOut(errorOut bool) scan.Token {
 		// Show the line number before we hit the newline.
 		p.lineNum = tok.Line
 	}
-	log.Println("token: ", tok)
 	return tok
 }
 

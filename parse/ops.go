@@ -13,8 +13,6 @@
 
 package parse
 
-import "log"
-
 type OpType int
 
 const (
@@ -109,7 +107,6 @@ func (os OpSet) lookup(s string) (Op, bool) {
 // Infix returns left, op, and right priorities
 func (os OpSet) Infix(s string) (int, int, int, bool) {
 	o, ok := os.lookup(s)
-	log.Printf("check if %v is infix: %v %v\n", s, ok, o)
 	if !ok {
 		return 0, 0, 0, false
 	}
@@ -128,8 +125,6 @@ func (os OpSet) Infix(s string) (int, int, int, bool) {
 
 func (os OpSet) Prefix(s string) (int, int, bool) {
 	o, ok := os.lookup(s)
-	log.Printf("check if %v is infix: \n", s, ok)
-	log.Printf("check if %v is prefix: %v %v\n", s, ok, o)
 	if !ok {
 		return 0, 0, false
 	}
@@ -145,7 +140,6 @@ func (os OpSet) Prefix(s string) (int, int, bool) {
 
 func (os OpSet) Postfix(s string) (int, int, bool) {
 	o, ok := os.lookup(s)
-	log.Printf("check if %v is postfix: %v %v\n", s, ok, o)
 	if !ok {
 		return 0, 0, false
 	}
