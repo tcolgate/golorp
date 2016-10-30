@@ -40,7 +40,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			fmt.Println("Got %v\n", t)
+			fmt.Printf("Got %v\n", t)
 		}
 	}
 
@@ -59,6 +59,6 @@ func main() {
 			fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 			break
 		}
-		fmt.Println("Got %v\n", t0)
+		fmt.Printf("Got %v\n", t0)
 	}
 }

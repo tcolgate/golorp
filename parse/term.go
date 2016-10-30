@@ -66,8 +66,12 @@ Loop:
 			break Loop
 		case scan.Comment:
 			continue
+		case scan.Newline:
+			continue
 
 		case scan.Variable:
+			return p.readRest(0, pri, term.NewVariable(l.Text))
+		case scan.Unbound:
 			return p.readRest(0, pri, term.NewVariable(l.Text))
 
 		case scan.Number:
@@ -119,12 +123,12 @@ Loop:
 			}
 			p.next() // discard ')'
 			return p.readRest(0, pri, t0)
+
 		case scan.EmptyList:
 		case scan.LeftBrack:
-		case scan.Unbound:
-			return p.readRest(0, pri, term.NewVariable(l.Text))
+
 		default:
-			return nil, fmt.Errorf("syntax error")
+			return nil, fmt.Errorf("syntax error, unexpected token %#v", l)
 		}
 	}
 
@@ -136,25 +140,32 @@ Loop:
 //   postfixTerm restTerm
 //   infixTerm term restTerm
 func (p *Parser) readRest(lpri, pri int, lt term.Term) (term.Term, error) {
-	l := p.peek()
-	switch l.Type {
-	case scan.Atom, scan.Comma, scan.SpecialAtom:
-		loppri, oppri, roppri, ok := p.operators.Infix(l.Text)
-		if ok && pri >= oppri && lpri <= loppri {
-			p.next() // consume the token
-			t0, err := p.readTerm(roppri)
-			if err != nil {
-				return nil, err
+	for {
+		l := p.peek()
+		switch l.Type {
+		case scan.Newline:
+			p.next()
+			continue
+		case scan.Atom, scan.Comma, scan.SpecialAtom:
+			loppri, oppri, roppri, ok := p.operators.Infix(l.Text)
+			if ok && pri >= oppri && lpri <= loppri {
+				p.next() // consume the token
+				t0, err := p.readTerm(roppri)
+				if err != nil {
+					return nil, err
+				}
+				return p.readRest(oppri, pri, term.NewCallable(l.Text, []term.Term{lt, t0}))
 			}
-			return p.readRest(oppri, pri, term.NewCallable(l.Text, []term.Term{lt, t0}))
-		}
-		oppri, argpri, ok := p.operators.Postfix(l.Text)
-		if ok && oppri <= pri && lpri <= argpri {
-			p.next() // consume the token
-			return p.readRest(oppri, pri, term.NewCallable(l.Text, []term.Term{lt}))
+			oppri, argpri, ok := p.operators.Postfix(l.Text)
+			if ok && oppri <= pri && lpri <= argpri {
+				p.next() // consume the token
+				return p.readRest(oppri, pri, term.NewCallable(l.Text, []term.Term{lt}))
+			}
+			return lt, nil
+		default:
+			return lt, nil
 		}
 	}
-	return lt, nil
 }
 
 func (p *Parser) readListItems() (term.Term, error) {

@@ -33,6 +33,15 @@ type Parser struct {
 	operators OpSet
 }
 
+type Error struct {
+	err error
+	tok scan.Token
+}
+
+func (err Error) Error() string {
+	return fmt.Sprintf("line %v,  %v", err.tok.Line, err.err)
+}
+
 // New returns a new parser that will read from the scanner.
 // The context must have have been created by this package's NewContext function.
 func New(fileName string, scanner *scan.Scanner) *Parser {
@@ -75,4 +84,8 @@ func (p *Parser) peek() scan.Token {
 	}
 	p.peekTok = p.scanner.Next()
 	return p.peekTok
+}
+
+func (p *Parser) errorf(args ...interface{}) Error {
+	return Error{}
 }
