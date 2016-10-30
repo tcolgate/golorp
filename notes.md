@@ -1,3 +1,8 @@
+# Numbers
+
+Golog tries the Ivy type arbitrary precision numbers using math/big.
+This seems like a good idea to me. Will try and do similar.
+
 # lists
 prolog lists are lisp style cons pairs BUT, the WAM has optimisations
 for flattening lists for more efficient storage.
