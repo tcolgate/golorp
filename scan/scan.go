@@ -289,9 +289,7 @@ func lexAny(l *Scanner) stateFn {
 		}
 		fallthrough
 	case isSpecial(r):
-		l.acceptRun(special)
-		l.emit(SpecialAtom)
-		return lexAny
+		return lexSpecialAtom
 	default:
 		return l.errorf("unrecognized character: %#U", r)
 	}
@@ -385,7 +383,7 @@ Loop:
 	return lexAny
 }
 
-// lexSpecialAtom
+// lexNumber
 func lexNumber(l *Scanner) stateFn {
 Loop:
 	for {
@@ -401,7 +399,7 @@ Loop:
 	return lexAny
 }
 
-// lexNumber
+// lexSpecialAtom
 func lexSpecialAtom(l *Scanner) stateFn {
 Loop:
 	for {
@@ -413,7 +411,12 @@ Loop:
 			break Loop
 		}
 	}
-	l.emit(SpecialAtom)
+	nr := l.peek()
+	if nr == '(' {
+		l.emit(FunctorAtom)
+	} else {
+		l.emit(SpecialAtom)
+	}
 	return lexAny
 }
 

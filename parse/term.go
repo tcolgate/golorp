@@ -15,6 +15,7 @@ package parse
 
 import (
 	"fmt"
+	"io"
 	"math/big"
 
 	"github.com/tcolgate/golorp/scan"
@@ -25,6 +26,9 @@ import (
 
 func (p *Parser) NextTerm() (term.Term, error) {
 	t, err := p.readTerm(1200)
+	if err == io.EOF {
+		return nil, err
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +62,11 @@ func (p *Parser) NextTerm() (term.Term, error) {
 //    '[' L ']'
 // B: T | T ',' B
 func (p *Parser) readTerm(pri int) (term.Term, error) {
-Loop:
 	for {
 		l := p.next()
 		switch l.Type {
 		case scan.EOF:
-			break Loop
+			return nil, io.EOF
 		case scan.Comment:
 			continue
 		case scan.Newline:
@@ -175,23 +178,24 @@ func (p *Parser) readListItems() (term.Term, error) {
 func (p *Parser) readFunctorArgs() ([]term.Term, error) {
 	fargs := []term.Term{}
 
-	for {
-		lt := p.peek()
-		if lt.Type == scan.RightParen {
-			break
-		}
+	lt := p.peek()
+	if lt.Type == scan.RightParen {
+		return fargs, nil
+	}
 
+	for {
 		t, err := p.readTerm(999)
+		if err == io.EOF {
+			return nil, fmt.Errorf("premature end of file while reading functor arguments")
+		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid functor argument, %#v", err)
 		}
 		fargs = append(fargs, t)
-		lt = p.peek()
-		if lt.Type == scan.RightParen {
-			break
-		}
+
+		lt := p.peek()
 		if lt.Type != scan.Comma {
-			return nil, fmt.Errorf("invalid functor arguments, tok %#v", lt)
+			break
 		}
 		// discard comma
 		p.next()
