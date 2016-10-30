@@ -128,6 +128,8 @@ func (p *Parser) readTerm(pri int) (term.Term, error) {
 			return p.readRest(0, pri, t0)
 
 		case scan.EmptyList:
+			return p.readRest(0, pri, term.NewCallable(".", []term.Term{}))
+
 		case scan.LeftBrack:
 			lis, err := p.readListItems()
 			if err != nil {
