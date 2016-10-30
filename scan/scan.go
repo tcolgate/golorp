@@ -54,6 +54,7 @@ const (
 	Unbound     // _
 	LeftBrack   // [
 	RightBrack  // ]
+	Bar         // |
 	EmptyList   // []
 	LeftParen   // (
 	RightParen  // )
@@ -256,6 +257,9 @@ func lexAny(l *Scanner) stateFn {
 		return lexAny
 	case r == ']':
 		l.emit(RightBrack)
+		return lexAny
+	case r == '|':
+		l.emit(Bar)
 		return lexAny
 	case r == '(':
 		l.emit(LeftParen)

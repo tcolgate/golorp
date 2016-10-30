@@ -129,6 +129,19 @@ func (p *Parser) readTerm(pri int) (term.Term, error) {
 
 		case scan.EmptyList:
 		case scan.LeftBrack:
+			tb := p.next() // consume bracket
+
+			lis, err := p.readListItems()
+			if err != nil {
+				return nil, err
+			}
+
+			tb = p.peek()
+			if tb.Type != scan.RightBrack {
+				return nil, fmt.Errorf("Unterminated list %#v", tb)
+			}
+			p.next() // discard ']'
+			return p.readRest(0, pri, term.NewCallable(".", lis))
 
 		default:
 			return nil, fmt.Errorf("syntax error, unexpected token %#v", l)
@@ -171,10 +184,6 @@ func (p *Parser) readRest(lpri, pri int, lt term.Term) (term.Term, error) {
 	}
 }
 
-func (p *Parser) readListItems() (term.Term, error) {
-	return nil, nil
-}
-
 func (p *Parser) readFunctorArgs() ([]term.Term, error) {
 	fargs := []term.Term{}
 
@@ -200,6 +209,46 @@ func (p *Parser) readFunctorArgs() ([]term.Term, error) {
 		// discard comma
 		p.next()
 	}
+
+	return fargs, nil
+}
+
+func (p *Parser) readListItems() ([]term.Term, error) {
+	fargs := []term.Term{}
+
+	lt := p.peek()
+	if lt.Type == scan.RightBrack {
+		return fargs, nil
+	}
+
+	for {
+		t, err := p.readTerm(999)
+		if err == io.EOF {
+			return nil, fmt.Errorf("premature end of file while reading list items")
+		}
+		if err != nil {
+			return nil, fmt.Errorf("invalid list item, %#v", err)
+		}
+		fargs = append(fargs, t)
+
+		lt := p.peek()
+		if lt.Type != scan.Comma {
+			break
+		}
+		// discard comma
+		p.next()
+	}
+
+	lt = p.peek()
+	if lt.Type != scan.Bar {
+		return fargs, nil
+	}
+
+	t, err := p.readTerm(999)
+	if err != nil {
+		return nil, fmt.Errorf("invalid list tail item, %#v", err)
+	}
+	fargs = append(fargs, t)
 
 	return fargs, nil
 }
