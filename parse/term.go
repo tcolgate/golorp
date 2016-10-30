@@ -129,18 +129,18 @@ func (p *Parser) readTerm(pri int) (term.Term, error) {
 
 		case scan.EmptyList:
 		case scan.LeftBrack:
-			tb := p.next() // consume bracket
-
 			lis, err := p.readListItems()
 			if err != nil {
 				return nil, err
 			}
 
-			tb = p.peek()
+			tb := p.peek()
 			if tb.Type != scan.RightBrack {
 				return nil, fmt.Errorf("Unterminated list %#v", tb)
 			}
 			p.next() // discard ']'
+			// '.' should probably just be of arity 2, using cons type
+			// cells
 			return p.readRest(0, pri, term.NewCallable(".", lis))
 
 		default:
@@ -244,6 +244,7 @@ func (p *Parser) readListItems() ([]term.Term, error) {
 		return fargs, nil
 	}
 
+	p.next() // consume '|'
 	t, err := p.readTerm(999)
 	if err != nil {
 		return nil, fmt.Errorf("invalid list tail item, %#v", err)
