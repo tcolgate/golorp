@@ -128,7 +128,7 @@ func (p *Parser) readTerm(pri int) (term.Term, error) {
 			return p.readRest(0, pri, t0)
 
 		case scan.EmptyList:
-			return p.readRest(0, pri, term.NewCallable(".", []term.Term{}))
+			return p.readRest(0, pri, term.NewCallable("cons", []term.Term{}))
 
 		case scan.LeftBrack:
 			lis, err := p.readListItems()
@@ -141,9 +141,21 @@ func (p *Parser) readTerm(pri int) (term.Term, error) {
 				return nil, fmt.Errorf("Unterminated list %#v", tb)
 			}
 			p.next() // discard ']'
-			// '.' should probably just be of arity 2, using cons type
-			// cells
-			return p.readRest(0, pri, term.NewCallable(".", lis))
+			// cons should probably just be of arity 2
+			if len(lis) == 0 {
+				return p.readRest(0, pri, term.NewCallable("cons", lis))
+			}
+			if len(lis) == 1 {
+				return nil, fmt.Errorf("Got list of len 1 somehow!")
+			}
+
+			tail := term.NewCallable("cons", []term.Term{lis[len(lis)-2], lis[len(lis)-1]})
+			//cons up the list
+			for i := len(lis) - 2; i > 0; i-- {
+				tail = term.NewCallable("cons", []term.Term{lis[i-1], tail})
+			}
+
+			return p.readRest(0, pri, tail)
 
 		default:
 			return nil, fmt.Errorf("syntax error, unexpected token %#v", l)
@@ -216,11 +228,11 @@ func (p *Parser) readFunctorArgs() ([]term.Term, error) {
 }
 
 func (p *Parser) readListItems() ([]term.Term, error) {
-	fargs := []term.Term{}
+	lis := []term.Term{}
 
 	lt := p.peek()
 	if lt.Type == scan.RightBrack {
-		return fargs, nil
+		return lis, nil
 	}
 
 	for {
@@ -231,7 +243,7 @@ func (p *Parser) readListItems() ([]term.Term, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid list item, %#v", err)
 		}
-		fargs = append(fargs, t)
+		lis = append(lis, t)
 
 		lt := p.peek()
 		if lt.Type != scan.Comma {
@@ -243,7 +255,8 @@ func (p *Parser) readListItems() ([]term.Term, error) {
 
 	lt = p.peek()
 	if lt.Type != scan.Bar {
-		return fargs, nil
+		lis = append(lis, term.NewCallable("cons", []term.Term{}))
+		return lis, nil
 	}
 
 	p.next() // consume '|'
@@ -251,7 +264,7 @@ func (p *Parser) readListItems() ([]term.Term, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid list tail item, %#v", err)
 	}
-	fargs = append(fargs, t)
+	lis = append(lis, t)
 
-	return fargs, nil
+	return lis, nil
 }
