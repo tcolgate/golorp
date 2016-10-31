@@ -14,6 +14,7 @@
 package golorp
 
 type Machine struct {
+
 	// M0
 	Code       []Cell
 	Heap       []Cell
@@ -49,38 +50,134 @@ type Instruction int
 type InstructionMode int
 
 const (
-	InvalidInstruction Instruction = iota // zero value not sure
-
-	// L0
-	PutStructure
-	SetVariable
-	SetValue
-	GetStructure
-	UnifyVariable
-	UnifyValue
-
-	// L1
-	Call
-	Proceeed
-	PutVariable
-	PutValue
-	GetVariable
-	GetValue
-
-	// L2
-	allocate
-	deallocate
-
-	// L3 - Prolog
-	TryMeElse
-	RetryMeElse
-	TrustMe
-
-	// Optimisations
-)
-
-const (
 	InvalidMode InstructionMode = iota // zero value not sure
 	Read
 	Write
 )
+
+type machineFunc func(*Machine) machineFunc
+
+// I0 - M0 insutrctions for L0
+
+func PutStructure(fn Atom, xi int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func SetVariable(xi int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func SetValue(xi int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func GetStructure(fn Atom, xi int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func UnifyVariable(xi int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func UnifyValue(xi int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func Unify(a1, a2 int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func Bind(a1, a2 int) machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func deref(m *Machine, xi int) Cell {
+	return nil
+}
+
+// L1
+func Call() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func Proceeed() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func PutVariable() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func PutValue() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func GetVariable() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func GetValue() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+// L2
+func Allocate() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func Deallocate() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+// L3 - Prolog
+func TryMeElse() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func RetryMeElse() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+func TrustMe() machineFunc {
+	return func(m *Machine) machineFunc {
+		return nil
+	}
+}
+
+// Optimisations
