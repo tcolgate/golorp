@@ -13,24 +13,46 @@
 
 package golorp
 
-type Machine struct {
+type Cell interface {
+	IsCell()
+}
 
+type RefCell interface {
+	Cell
+	Ptr() Cell
+	Name() string
+}
+
+type StructurCell interface {
+	Cell
+	Ptr() Cell
+}
+
+// FunctorCell is not tagged in WAM-Book, but we need a type
+type FunctorCell interface {
+	Cell
+	Functor() (Atom, int)
+}
+
+type Machine struct {
 	// M0
-	Code       []Cell
 	Heap       []Cell
-	PDL        []*Cell
-	XRegisters []Cell
-	HReg       int
+	XRegisters []int
 	Mode       InstructionMode
+	HReg       int
+	SReg       int
 
 	// M1
-	ARegisters []Cell
-	PReg       int
+	Code   []Cell
+	Labels map[string]int
+
+	PDL  []*Cell
+	PReg int
 
 	// M2
 	AndStack []Environment
-	CPReg    int
 	EReg     int
+	CPReg    int
 
 	// M3 - Prolog
 	OrStack []ChoicePoint
@@ -40,7 +62,6 @@ type Machine struct {
 	GBReg   int
 
 	// Optimisations
-	B0Reg int
 }
 
 type Environment Cell

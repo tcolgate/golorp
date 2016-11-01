@@ -11,18 +11,30 @@ type Term interface {
 	isTerm()
 }
 
-type number struct {
+type Atom string
+
+func (a Atom) String() string {
+	return fmt.Sprintf("(atom %s)", string(a))
+}
+
+func (Atom) isTerm() {}
+
+func NewAtom(s string) Term {
+	return Atom(s)
+}
+
+type Number struct {
 	n *big.Float
 }
 
-func (n *number) String() string {
+func (n *Number) String() string {
 	return fmt.Sprintf("(number %v)", n.n)
 }
 
-func (*number) isTerm() {}
+func (*Number) isTerm() {}
 
 func NewNumber(n *big.Float) Term {
-	return &number{n}
+	return &Number{n}
 }
 
 type TermList []Term
@@ -35,43 +47,37 @@ func (ts TermList) String() string {
 	return strings.Join(ss, ",")
 }
 
-type callable struct {
+type Callable struct {
 	fn   string
 	args []Term
 }
 
-func (c *callable) String() string {
+func (c *Callable) String() string {
 	return fmt.Sprintf("(%q/%d %s)", c.fn, len(c.args), fmt.Sprintf("%s", c.args))
 }
 
-func (*callable) isTerm() {}
+func (*Callable) isTerm() {}
 
-func (c *callable) Functor() string {
-	return c.fn
+func (c *Callable) Functor() (string, int) {
+	return c.fn, len(c.args)
 }
 
-func (c *callable) Arity() int {
-	return len(c.args)
-}
-
-func (c *callable) Args() []Term {
+func (c *Callable) Args() []Term {
 	return c.args
 }
 
 func NewCallable(fn string, args []Term) Term {
-	return &callable{fn, args}
+	return &Callable{fn, args}
 }
 
-type variable struct {
-	vn string
+type Variable string
+
+func (v Variable) String() string {
+	return fmt.Sprintf("(var %s)", string(v))
 }
 
-func (v *variable) String() string {
-	return fmt.Sprintf("(var %v)", v.vn)
-}
-
-func (*variable) isTerm() {}
+func (Variable) isTerm() {}
 
 func NewVariable(vn string) Term {
-	return &variable{vn}
+	return Variable(vn)
 }
