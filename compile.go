@@ -58,25 +58,29 @@ func assignReg(t term.Term) []term.Term {
 	regs := []term.Term{}
 	vars := map[term.Variable]int{}
 
-	var assign func(p term.Term)
-	assign = func(p term.Term) {
+	assign := func(p term.Term) {
 		switch t := p.(type) {
-		case term.Variable:
-			if _, ok := vars[t]; ok {
-				return
-			}
-			regs = append(regs, p)
-			vars[t] = len(regs) - 1
 		case *term.Callable:
-			regs = append(regs, p)
-			for _, st := range t.Args() {
-				assign(st)
+			for _, at := range t.Args() {
+				switch t := at.(type) {
+				case term.Variable:
+					if _, ok := vars[t]; !ok {
+						regs = append(regs, t)
+						vars[t] = len(regs) - 1
+					}
+				case *term.Callable:
+					regs = append(regs, t)
+				default:
+				}
 			}
+		case term.Variable:
 		default:
 			panic("unknown term m0 type")
 		}
 	}
-	assign(t)
+
+	regs = append(regs, t)
+	term.WalkDepthFirst(assign, t)
 
 	return regs
 }

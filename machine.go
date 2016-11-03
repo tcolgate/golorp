@@ -13,6 +13,8 @@
 
 package golorp
 
+import "github.com/mndrix/golog/term"
+
 type Cell interface {
 	IsCell()
 }
@@ -31,7 +33,7 @@ type StructurCell interface {
 // FunctorCell is not tagged in WAM-Book, but we need a type
 type FunctorCell interface {
 	Cell
-	Functor() (Atom, int)
+	Functor() (term.Atom, int)
 }
 
 type Machine struct {
@@ -80,7 +82,7 @@ type machineFunc func(*Machine) machineFunc
 
 // I0 - M0 insutrctions for L0
 
-func PutStructure(fn Atom, xi int) machineFunc {
+func PutStructure(fn term.Atom, xi int) machineFunc {
 	return func(m *Machine) machineFunc {
 		return nil
 	}
@@ -98,7 +100,7 @@ func SetValue(xi int) machineFunc {
 	}
 }
 
-func GetStructure(fn Atom, xi int) machineFunc {
+func GetStructure(fn term.Atom, xi int) machineFunc {
 	return func(m *Machine) machineFunc {
 		return nil
 	}
