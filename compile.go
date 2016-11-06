@@ -2,99 +2,90 @@ package golorp
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tcolgate/golorp/term"
 )
 
 // Compile a single query, and a program
-func compileL0(q, p term.Term) []machineFunc {
+func compileL0(q, p term.Term) []CodeCell {
+	code := []CodeCell{}
 	qregs := assignReg(q)
 
-	fmt.Printf("REGS: %s\n", qregs)
+	for i := 0; i < len(qregs); i++ {
+		fmt.Printf("REGS: X%d = %s\n", i, qregs[i])
+	}
 
-	qfl := flattenBottomUp(qregs)
+	seen := map[term.Variable]int{}
+	for i := len(qregs) - 1; i >= 0; i-- {
+		qt := qregs[i]
 
-	fmt.Printf("FLAT: %s\n", qfl)
-
-	insts := []string{}
-	funs := map[*term.Callable]int{}
-	vars := map[term.Variable]int{}
-
-	for _, qt := range qfl {
 		switch t := qt.(type) {
 		case *term.Callable:
-			insts = append(insts, fmt.Sprintf("STR %d", len(insts)+1))
-			fn, arity := t.Functor()
-			insts = append(insts, fmt.Sprintf("%s/%d", fn, arity))
-			funs[t] = len(insts) - 1
+			fn, _ := t.Functor()
+			inst, str := PutStructure(term.Atom(fn), i)
+			code = append(code, CodeCell{inst, str})
 			for _, at := range t.Args() {
 				switch t := at.(type) {
 				case term.Variable:
-					if i, ok := vars[t]; ok {
-						insts = append(insts, fmt.Sprintf("REF %v", i))
+					if n, ok := seen[t]; ok {
+						inst, str := SetValue(n)
+						code = append(code, CodeCell{inst, str})
 						continue
 					}
-					vars[t] = len(insts)
-					insts = append(insts, fmt.Sprintf("REF %v", vars[t]))
+					seen[t] = i
+					inst, str := SetVariable(i)
+					code = append(code, CodeCell{inst, str})
 				case *term.Callable:
-					if _, ok := funs[t]; !ok {
-						panic("Function not serialized yet")
-					}
-					insts = append(insts, fmt.Sprintf("STR %v", funs[t]))
+					inst, str := PutStructure(t.Functor())
+					code = append(code, CodeCell{inst, str})
 				}
 			}
+		case term.Variable:
 		default:
 			panic("unknown term m0 type")
 		}
 	}
 
-	fmt.Println(strings.Join(insts, "\n"))
-
-	return nil
+	return code
 }
 
-func assignReg(t term.Term) []term.Term {
-	regs := []term.Term{}
+func assignReg(t term.Term) map[int]term.Term {
+	regs := map[int]term.Term{}
 	vars := map[term.Variable]int{}
 
-	assign := func(p term.Term) {
+	var assign func(p term.Term)
+	assign = func(p term.Term) {
 		switch t := p.(type) {
 		case *term.Callable:
 			for _, at := range t.Args() {
 				switch t := at.(type) {
 				case term.Variable:
 					if _, ok := vars[t]; !ok {
-						regs = append(regs, t)
+						regs[len(regs)] = t
 						vars[t] = len(regs) - 1
 					}
 				case *term.Callable:
-					regs = append(regs, t)
+					regs[len(regs)] = t
 				default:
 				}
 			}
+
+			for _, at := range t.Args() {
+				switch t := at.(type) {
+				case *term.Callable:
+					term.WalkDepthFirst(assign, t)
+				default:
+				}
+			}
+
 		case term.Variable:
 		default:
 			panic("unknown term m0 type")
 		}
 	}
 
-	regs = append(regs, t)
+	regs[len(regs)] = t
 	term.WalkDepthFirst(assign, t)
 
 	return regs
-}
-
-func flattenBottomUp(ts []term.Term) []term.Term {
-	out := []term.Term{}
-	for i := len(ts) - 1; i >= 0; i-- {
-		switch ts[i].(type) {
-		case term.Variable:
-		case *term.Callable:
-			out = append(out, ts[i])
-		default:
-			panic("unknown term m0 type")
-		}
-	}
-	return out
 }

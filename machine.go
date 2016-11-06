@@ -13,7 +13,11 @@
 
 package golorp
 
-import "github.com/mndrix/golog/term"
+import (
+	"fmt"
+
+	"github.com/tcolgate/golorp/term"
+)
 
 type Cell interface {
 	IsCell()
@@ -78,56 +82,60 @@ const (
 	Write
 )
 
-type machineFunc func(*Machine) machineFunc
+type machineFunc func(*Machine) (machineFunc, string)
+type CodeCell struct {
+	fn machineFunc
+	string
+}
 
 // I0 - M0 insutrctions for L0
 
-func PutStructure(fn term.Atom, xi int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func PutStructure(fn term.Atom, xi int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("put_structure %s X%d", fn, xi)
 }
 
-func SetVariable(xi int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func SetVariable(xi int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("set_variable X%d", xi)
 }
 
-func SetValue(xi int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func SetValue(xi int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("set_value X%d", xi)
 }
 
-func GetStructure(fn term.Atom, xi int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func GetStructure(fn term.Atom, xi int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("get_structure %s X%d", fn, xi)
 }
 
-func UnifyVariable(xi int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func UnifyVariable(xi int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("unify_variable X%d", xi)
 }
 
-func UnifyValue(xi int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func UnifyValue(xi int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("unify_value X%d", xi)
 }
 
-func Unify(a1, a2 int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func Unify(a1, a2 int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("unify A%d, A%d", a1, a2)
 }
 
-func Bind(a1, a2 int) machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func Bind(a1, a2 int) (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("bind A%d A%d", a1, a2)
 }
 
 func deref(m *Machine, xi int) Cell {
@@ -135,72 +143,72 @@ func deref(m *Machine, xi int) Cell {
 }
 
 // L1
-func Call() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func Call() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("call")
 }
 
-func Proceeed() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func Proceeed() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("proceed")
 }
 
-func PutVariable() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func PutVariable() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("put_variable")
 }
 
-func PutValue() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func PutValue() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("put_value")
 }
 
-func GetVariable() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func GetVariable() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("get_variable")
 }
 
-func GetValue() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func GetValue() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("get_value")
 }
 
 // L2
-func Allocate() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func Allocate() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("allocate")
 }
 
-func Deallocate() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func Deallocate() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("deallocate")
 }
 
 // L3 - Prolog
-func TryMeElse() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func TryMeElse() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("try_me_else")
 }
 
-func RetryMeElse() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func RetryMeElse() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("retry_me_else")
 }
 
-func TrustMe() machineFunc {
-	return func(m *Machine) machineFunc {
-		return nil
-	}
+func TrustMe() (machineFunc, string) {
+	return func(m *Machine) (machineFunc, string) {
+		return nil, ""
+	}, fmt.Sprintf("trust_me")
 }
 
 // Optimisations
