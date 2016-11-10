@@ -80,15 +80,7 @@ func assignReg(t term.Term) (map[int]term.Term, map[term.Term]int) {
 					}
 				case *term.Callable:
 					regs[len(regs)] = t
-					invregs[p] = len(regs) - 1
-				default:
-				}
-			}
-
-			for _, at := range t.Args() {
-				switch t := at.(type) {
-				case *term.Callable:
-					term.WalkDepthFirst(assign, t)
+					invregs[at] = len(regs) - 1
 				default:
 				}
 			}
@@ -99,9 +91,37 @@ func assignReg(t term.Term) (map[int]term.Term, map[term.Term]int) {
 		}
 	}
 
+	var output func(p term.Term)
+	output = func(p term.Term) {
+		xi, ok := invregs[p]
+		if !ok {
+			panic("unknown term")
+		}
+		switch t := p.(type) {
+		case *term.Callable:
+			fmt.Printf("X%d = ", xi)
+
+			fn, argc := t.Functor()
+			fmt.Printf("%s/%d ", fn, argc)
+			for _, at := range t.Args() {
+				xi, ok := invregs[at]
+				if !ok {
+					panic("unknown term")
+				}
+				fmt.Printf("X%d ", xi)
+			}
+
+			fmt.Printf("\n")
+		case term.Variable:
+		default:
+			panic("unknown term m0 type")
+		}
+
+	}
+
 	regs[len(regs)] = t
 	invregs[t] = len(regs) - 1
-	term.WalkDepthFirst(assign, t)
+	term.WalkDepthFirst(assign, output, t)
 
 	return regs, invregs
 }
