@@ -6,47 +6,35 @@ import (
 	"github.com/tcolgate/golorp/term"
 )
 
+type streamToken struct {
+	fn string // functor name
+	vn string // variable name, for named vars
+	xi int    // The register to use
+}
+
 // Compile a single query, and a program
 func compileL0(q, p term.Term) []CodeCell {
 	code := []CodeCell{}
-	qregs, invqregs := assignReg(q)
 
-	for i := 0; i < len(qregs); i++ {
-		fmt.Printf("REGS: X%d = %s\n", i, qregs[i])
-	}
+	seen := map[int]bool{}
+	ts := make(chan streamToken)
+	go flatten(ts, q)
 
-	seen := map[term.Variable]int{}
-	for i := len(qregs) - 1; i >= 0; i-- {
-		qt := qregs[i]
-
-		switch t := qt.(type) {
-		case *term.Callable:
-			fn, _ := t.Functor()
-			inst, str := PutStructure(term.Atom(fn), i)
+	for ft := range ts {
+		switch {
+		case ft.fn != "":
+			inst, str := PutStructure(term.Atom(ft.fn), ft.xi)
+			seen[ft.xi] = true
 			code = append(code, CodeCell{inst, str})
-			for _, at := range t.Args() {
-				switch t := at.(type) {
-				case term.Variable:
-					var xi int
-					var ok bool
-					if xi, ok = invqregs[at]; !ok {
-						panic("variable without assigned register")
-					}
-					if _, ok := seen[t]; ok {
-						inst, str := SetValue(xi)
-						code = append(code, CodeCell{inst, str})
-						continue
-					}
-					seen[t] = i
-					inst, str := SetVariable(xi)
-					code = append(code, CodeCell{inst, str})
-				case *term.Callable:
-					fn, argc := t.Functor()
-					inst, str := PutStructure(term.Atom(fn), argc)
-					code = append(code, CodeCell{inst, str})
-				}
+		case ft.fn == "":
+			if _, ok := seen[ft.xi]; ok {
+				inst, str := SetValue(ft.xi)
+				code = append(code, CodeCell{inst, str})
+				continue
 			}
-		case term.Variable:
+			seen[ft.xi] = true
+			inst, str := SetVariable(ft.xi)
+			code = append(code, CodeCell{inst, str})
 		default:
 			panic("unknown term m0 type")
 		}
@@ -58,7 +46,9 @@ func compileL0(q, p term.Term) []CodeCell {
 	return code
 }
 
-func assignReg(t term.Term) (map[int]term.Term, map[term.Term]int) {
+func flatten(ts chan<- streamToken, t term.Term) {
+	defer close(ts)
+
 	regs := map[int]term.Term{}
 	invregs := map[term.Term]int{}
 	vars := map[term.Variable]int{}
@@ -99,29 +89,27 @@ func assignReg(t term.Term) (map[int]term.Term, map[term.Term]int) {
 		}
 		switch t := p.(type) {
 		case *term.Callable:
-			fmt.Printf("X%d = ", xi)
-
 			fn, argc := t.Functor()
-			fmt.Printf("%s/%d ", fn, argc)
+			ts <- streamToken{
+				fn: fmt.Sprintf("%s/%d ", fn, argc),
+				xi: xi,
+			}
 			for _, at := range t.Args() {
 				xi, ok := invregs[at]
 				if !ok {
 					panic("unknown term")
 				}
-				fmt.Printf("X%d ", xi)
+				ts <- streamToken{
+					xi: xi,
+				}
 			}
-
-			fmt.Printf("\n")
 		case term.Variable:
 		default:
 			panic("unknown term m0 type")
 		}
-
 	}
 
 	regs[len(regs)] = t
 	invregs[t] = len(regs) - 1
 	term.WalkDepthFirst(assign, output, t)
-
-	return regs, invregs
 }
