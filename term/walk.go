@@ -3,7 +3,9 @@ package term
 // WalkDepthFirst performs a depth first pre-order, left-to-right walk,
 // calling function tf with each node.
 func WalkDepthFirst(pre, post func(Term), t Term) {
-	pre(t)
+	if pre != nil {
+		pre(t)
+	}
 	switch st := t.(type) {
 	case *Callable:
 		for _, at := range st.Args() {
@@ -12,5 +14,7 @@ func WalkDepthFirst(pre, post func(Term), t Term) {
 	case Variable:
 	default:
 	}
-	post(t)
+	if post != nil {
+		post(t)
+	}
 }

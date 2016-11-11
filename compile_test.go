@@ -30,7 +30,7 @@ type testL0 struct {
 }
 
 var testsL0 = []testL0{
-	{"query0", `p(Z,h(Z,W),f(W)).`, `p(Z,h(Z,W),f(W)).`},
+	{"query0", `p(Z,h(Z,W),f(W)).`, `p(f(X),h(Y,f(a)),Y).`},
 }
 
 func TestCompileL0(t *testing.T) {
@@ -49,7 +49,7 @@ func TestCompileL0(t *testing.T) {
 			log.Println(q)
 			log.Println(p)
 
-			compileL0(p, q)
+			compileL0(q, p)
 		})
 	}
 }
