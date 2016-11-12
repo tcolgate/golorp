@@ -41,6 +41,16 @@ var mtestsL0 = []mtestL0{
 		`p(f(X),h(Y,f(a)),Y).`,
 		true,
 	},
+	{"query2",
+		`p(Z,h(Z,a())).`,
+		`p(Z,h(Z,Z)).`,
+		false,
+	},
+	{"query2",
+		`p(A,h(A,a(),D)).`,
+		`p(a(),h(Z,B,B)).`,
+		false,
+	},
 }
 
 func TestMachine0(t *testing.T) {
@@ -73,7 +83,7 @@ func TestMachine0(t *testing.T) {
 			m.run(cs)
 
 			if st.fail != m.Failed {
-				t.Fatalf("test failure, expected %v, got $v", st.fail, m.Failed)
+				t.Fatalf("test failure, expected %v, got %v", st.fail, m.Failed)
 			}
 
 			fmt.Printf("%s", m)

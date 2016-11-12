@@ -327,6 +327,8 @@ func (m *Machine) deref(a int) Cell {
 }
 
 func (m *Machine) bind(a, b Cell) {
+	r1, ok1 := a.(RefCell)
+	r2, ok2 := b.(RefCell)
 }
 
 func (m *Machine) unify(a1, a2 int) {
