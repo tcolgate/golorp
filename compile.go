@@ -1,13 +1,10 @@
 package golorp
 
-import (
-	"fmt"
-
-	"github.com/tcolgate/golorp/term"
-)
+import "github.com/tcolgate/golorp/term"
 
 type streamToken struct {
 	fn string // functor name
+	n  int    // arity of fn
 	vn string // variable name, for named vars
 	xi int    // The register to use
 }
@@ -31,7 +28,7 @@ func compileL0Query(t term.Term) []CodeCell {
 	for ft := range ts {
 		switch {
 		case ft.fn != "":
-			inst, str := PutStructure(term.Atom(ft.fn), ft.xi)
+			inst, str := PutStructure(term.Atom(ft.fn), ft.n, ft.xi)
 			seen[ft.xi] = true
 			code = append(code, CodeCell{inst, str})
 		case ft.fn == "":
@@ -62,7 +59,7 @@ func compileL0Program(t term.Term) []CodeCell {
 	for ft := range ts {
 		switch {
 		case ft.fn != "":
-			inst, str := GetStructure(term.Atom(ft.fn), ft.xi)
+			inst, str := GetStructure(term.Atom(ft.fn), ft.n, ft.xi)
 			seen[ft.xi] = true
 			code = append(code, CodeCell{inst, str})
 		case ft.fn == "":
@@ -159,7 +156,8 @@ func (ctx *tokeningCtx) tokenize(p term.Term) {
 	case *term.Callable:
 		fn, argc := t.Functor()
 		ctx.ts <- streamToken{
-			fn: fmt.Sprintf("%s/%d ", fn, argc),
+			fn: fn,
+			n:  argc,
 			xi: xi,
 		}
 		for _, at := range t.Args() {

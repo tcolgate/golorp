@@ -54,6 +54,7 @@ func (c StrCell) String() string {
 // FuncCell is not tagged in WAM-Book, but we need a type
 type FuncCell struct {
 	Atom term.Atom
+	n    int
 }
 
 // IsCell marks FuncCell as a valid heap Cell
@@ -61,7 +62,7 @@ func (FuncCell) IsCell() {
 }
 
 func (c FuncCell) String() string {
-	return fmt.Sprintf("%s", c.Atom)
+	return fmt.Sprintf("%s/%d", c.Atom, c.n)
 }
 
 // HeapCells is a utility type to format a slice of
@@ -83,25 +84,47 @@ type RegCells []Cell
 func (cs RegCells) String() string {
 	str := ""
 	for i, c := range cs {
-		str += fmt.Sprintf("X%d  = %s\n", i, c)
+		str += fmt.Sprintf("X%d = %s\n", i, c)
 	}
 	return str
 }
 
+type PDL []int
+
+func (p PDL) isEmpty() bool {
+	if len(p) > 0 {
+		return false
+	}
+	return true
+}
+
+func (p PDL) push(a int) {
+	p = append(p, a)
+}
+
+func (p PDL) pop() int {
+	a := p[len(p)-1]
+	p = p[:len(p)-1]
+	return a
+}
+
 // Machine hods the state of our WAM
 type Machine struct {
+	// We use to stop on failure
+	Finished bool
+	Failed   bool
 	// M0
 	Heap       []Cell
 	XRegisters []Cell
 	Mode       InstructionMode
 	HReg       int
 	SReg       int
+	PDL        PDL
 
 	// M1
 	Code   []Cell
 	Labels map[string]int
 
-	PDL  []*Cell
 	PReg int
 
 	// M2
@@ -127,12 +150,13 @@ func NewMachine() *Machine {
 }
 
 func (m *Machine) String() string {
-	str := "HEAP:\n"
-	str += fmt.Sprintf("%s\n", HeapCells(m.Heap))
+	str := fmt.Sprintf("Finished %v Failed: %v\n\n", m.Finished, m.Failed)
+	str += fmt.Sprintf("H: %d S: %d\n", m.HReg, m.SReg)
+	str += fmt.Sprintf("Mode %v\n", m.Mode)
 	str += "X Registers:\n"
 	str += fmt.Sprintf("%s\n", RegCells(m.XRegisters))
-	str += fmt.Sprintf("H: %d S: %d\n", m.HReg, m.SReg)
-
+	str += "Heap:\n"
+	str += fmt.Sprintf("%s\n", HeapCells(m.Heap))
 	return str
 }
 
@@ -168,19 +192,23 @@ func (m *Machine) run(cs []CodeCell) {
 	for _, c := range cs {
 		fmt.Printf("%s\n", c.string)
 		c.fn(m)
+		if m.Finished {
+			return
+		}
 	}
+	m.Finished = true
 }
 
 // I0 - M0 insutrctions for L0
 
-func PutStructure(fn term.Atom, xi int) (machineFunc, string) {
+func PutStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
 		m.Heap[m.HReg] = StrCell{m.HReg + 1}
-		m.Heap[m.HReg+1] = FuncCell{fn}
+		m.Heap[m.HReg+1] = FuncCell{fn, n}
 		m.XRegisters[xi] = m.Heap[m.HReg]
 		m.HReg = m.HReg + 2
 		return nil, ""
-	}, fmt.Sprintf("put_structure %s X%d", fn, xi)
+	}, fmt.Sprintf("put_structure %s/%d X%d", fn, n, xi)
 }
 
 func SetVariable(xi int) (machineFunc, string) {
@@ -200,20 +228,65 @@ func SetValue(xi int) (machineFunc, string) {
 	}, fmt.Sprintf("set_value X%d", xi)
 }
 
-func GetStructure(fn term.Atom, xi int) (machineFunc, string) {
+func GetStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		addr := m.deref(m.XRegisters[xi].(StrCell).Ptr)
+
+		cc := m.Heap[addr]
+		switch c := cc.(type) {
+		case RefCell:
+			m.Heap[m.HReg] = StrCell{m.HReg + 1}
+			m.Heap[m.HReg+1] = FuncCell{fn, n}
+			m.XRegisters[xi] = m.Heap[m.HReg]
+			m.bind(addr, m.HReg)
+			m.HReg = m.HReg + 2
+			m.Mode = Write
+		case StrCell:
+			if tc, ok := m.Heap[c.Ptr].(FuncCell); ok && tc.Atom == fn {
+				fmt.Printf("IN HERE 1 %v %v %v\n", ok, tc, fn)
+				m.SReg = c.Ptr + 1
+				m.Mode = Read
+			} else {
+				fmt.Printf("IN HERE 2 %v %v %v\n", ok, tc, fn)
+				m.Finished = true
+				m.Failed = true
+			}
+		default:
+			fmt.Printf("IN HERE 3 %#v\n", c)
+			m.Finished = true
+			m.Failed = true
+		}
 		return nil, ""
-	}, fmt.Sprintf("get_structure %s X%d", fn, xi)
+	}, fmt.Sprintf("get_structure %s/%d X%d", fn, n, xi)
 }
 
 func UnifyVariable(xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		switch m.Mode {
+		case Read:
+			m.XRegisters[xi] = m.Heap[m.SReg]
+		case Write:
+			m.Heap[m.HReg] = RefCell{m.HReg}
+			m.XRegisters[xi] = m.Heap[m.HReg]
+			m.HReg = m.HReg + 1
+		default:
+			panic(fmt.Errorf("invalid read/write mode %v", m.Mode))
+		}
 		return nil, ""
 	}, fmt.Sprintf("unify_variable X%d", xi)
 }
 
 func UnifyValue(xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		switch m.Mode {
+		case Read:
+			m.unify(xi, m.SReg)
+		case Write:
+			m.Heap[m.HReg] = m.XRegisters[xi]
+			m.HReg = m.HReg + 1
+		default:
+			panic(fmt.Errorf("invalid read/write mode %v", m.Mode))
+		}
 		return nil, ""
 	}, fmt.Sprintf("unify_value X%d", xi)
 }
@@ -230,16 +303,56 @@ func Bind(a1, a2 int) (machineFunc, string) {
 	}, fmt.Sprintf("bind A%d A%d", a1, a2)
 }
 
-func deref(m *Machine, xi int) int {
+func (m *Machine) deref(a int) int {
 	for {
-		switch c := m.Heap[xi].(type) {
+		switch c := m.Heap[a].(type) {
 		case RefCell:
-			if c.Ptr == xi { // Ref Cell points to itself, unbound
-				return xi
+			if c.Ptr == a { // Ref Cell points to itself, unbound
+				return a
 			}
-			xi = c.Ptr
+			a = c.Ptr
 		default:
-			return xi
+			return a
+		}
+	}
+}
+
+func (m *Machine) bind(a, b int) {
+}
+
+func (m *Machine) unify(a1, a2 int) {
+	m.PDL.push(a1)
+	m.PDL.push(a2)
+	fail := false
+	for !(m.PDL.isEmpty() || fail) {
+		d1 := m.deref(m.PDL.pop())
+		d2 := m.deref(m.PDL.pop())
+		if d1 != d2 {
+			t1, t2 := m.Heap[d1], m.Heap[d2]
+			_, ok1 := t1.(RefCell)
+			_, ok2 := t2.(RefCell)
+			if ok1 || ok2 {
+				m.bind(d1, d2)
+			} else {
+				v1, ok1 := t1.(StrCell)
+				v2, ok2 := t2.(StrCell)
+				if !(ok1 && !ok2) {
+					panic("Wrong cell type")
+				}
+				f1, ok1 := m.Heap[v1.Ptr].(FuncCell)
+				f2, ok2 := m.Heap[v2.Ptr].(FuncCell)
+				if !(ok1 && !ok2) {
+					panic("Wrong cell type")
+				}
+				if f1.Atom == f2.Atom && f1.n == f2.n {
+					for i := 0; i < f1.n; i++ {
+						m.PDL.push(v1.Ptr + i)
+						m.PDL.push(v2.Ptr + i)
+					}
+				} else {
+					fail = true
+				}
+			}
 		}
 	}
 }
