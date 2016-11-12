@@ -105,14 +105,20 @@ func newTokeningCtx(ts chan<- streamToken) *tokeningCtx {
 	}
 }
 
+func (ctx *tokeningCtx) assignReg(t term.Term) int {
+	next := len(ctx.regs)
+	ctx.regs[next] = t
+	ctx.invregs[t] = next
+
+	return next
+}
+
 func flattenq(ts chan<- streamToken, t term.Term) {
 	defer close(ts)
 
 	ctx := newTokeningCtx(ts)
 
-	ctx.regs[len(ctx.regs)] = t
-	ctx.invregs[t] = len(ctx.regs) - 1
-
+	ctx.assignReg(t)
 	term.WalkDepthFirst(ctx.assign, ctx.tokenize, t)
 }
 
@@ -121,8 +127,7 @@ func flattenp(ts chan<- streamToken, t term.Term) {
 
 	ctx := newTokeningCtx(ts)
 
-	ctx.regs[len(ctx.regs)] = t
-	ctx.invregs[t] = len(ctx.regs) - 1
+	ctx.assignReg(t)
 	term.WalkDepthFirst(ctx.assign, nil, t)
 
 	term.WalkDepthFirst(ctx.tokenize, nil, t)
@@ -135,16 +140,14 @@ func (ctx *tokeningCtx) assign(p term.Term) {
 			switch t := at.(type) {
 			case term.Variable:
 				if xi, ok := ctx.vars[t]; !ok {
-					ctx.regs[len(ctx.regs)] = t
-					ctx.vars[t] = len(ctx.regs) - 1
-					ctx.invregs[at] = len(ctx.regs) - 1
+					xi := ctx.assignReg(at)
+					ctx.vars[t] = xi
 					continue
 				} else {
 					ctx.invregs[at] = xi
 				}
 			case *term.Callable:
-				ctx.regs[len(ctx.regs)] = t
-				ctx.invregs[at] = len(ctx.regs) - 1
+				ctx.assignReg(at)
 			default:
 			}
 		}
