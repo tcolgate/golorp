@@ -88,6 +88,16 @@ type CodeCell struct {
 	string
 }
 
+type CodeCells []CodeCell
+
+func (cs CodeCells) String() string {
+	str := ""
+	for _, i := range cs {
+		str += fmt.Sprintf("%s\n", i.string)
+	}
+	return str
+}
+
 // I0 - M0 insutrctions for L0
 
 func PutStructure(fn term.Atom, xi int) (machineFunc, string) {

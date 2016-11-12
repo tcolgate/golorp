@@ -13,18 +13,11 @@ type streamToken struct {
 }
 
 // Compile a single query, and a program
-func compileL0(q, p term.Term) []CodeCell {
+func compileL0(q, p term.Term) CodeCells {
 	qcode := compileL0Query(q)
-	for _, i := range qcode {
-		fmt.Printf("Q CODE %#v\n", i.string)
-	}
-
 	pcode := compileL0Program(p)
-	for _, i := range pcode {
-		fmt.Printf("P CODE %#v\n", i.string)
-	}
 
-	return append(qcode, pcode...)
+	return CodeCells(append(qcode, pcode...))
 }
 
 // Compile a single query, and a program

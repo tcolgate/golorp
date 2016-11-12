@@ -15,7 +15,6 @@ package golorp
 
 import (
 	"bytes"
-	"log"
 	"testing"
 
 	"github.com/tcolgate/golorp/context"
@@ -27,10 +26,36 @@ type testL0 struct {
 	name string
 	q    string
 	p    string
+	res  string
 }
 
 var testsL0 = []testL0{
-	{"query0", `p(Z,h(Z,W),f(W)).`, `p(f(X),h(Y,f(a)),Y).`},
+	{"query0",
+		`p(Z,h(Z,W),f(W)).`,
+		`p(f(X),h(Y,f(a)),Y).`,
+		`put_structure (atom h/2 ) X2
+set_variable X1
+set_variable X4
+put_structure (atom f/1 ) X3
+set_value X4
+put_structure (atom p/3 ) X0
+set_value X1
+set_value X2
+set_value X3
+get_structure (atom p/3 ) X0
+unify_variable X1
+unify_variable X2
+unify_variable X3
+get_structure (atom f/1 ) X1
+unify_variable X4
+get_structure (atom h/2 ) X2
+unify_value X3
+unify_variable X5
+get_structure (atom f/1 ) X5
+unify_variable X6
+get_structure (atom a/0 ) X6
+`,
+	},
 }
 
 func TestCompileL0(t *testing.T) {
@@ -46,10 +71,10 @@ func TestCompileL0(t *testing.T) {
 			q, _ := qt.NextTerm()
 			p, _ := pt.NextTerm()
 
-			log.Println(q)
-			log.Println(p)
-
-			compileL0(q, p)
+			cs := compileL0(q, p)
+			if cs.String() != st.res {
+				t.Fatalf("expected: %#s, got: %#s", st.res, cs)
+			}
 		})
 	}
 }
