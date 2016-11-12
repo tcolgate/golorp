@@ -33,27 +33,27 @@ var testsL0 = []testL0{
 	{"query0",
 		`p(Z,h(Z,W),f(W)).`,
 		`p(f(X),h(Y,f(a)),Y).`,
-		`put_structure (atom h/2 ) X2
+		`put_structure (atom h)/2 X2
 set_variable X1
 set_variable X4
-put_structure (atom f/1 ) X3
+put_structure (atom f)/1 X3
 set_value X4
-put_structure (atom p/3 ) X0
+put_structure (atom p)/3 X0
 set_value X1
 set_value X2
 set_value X3
-get_structure (atom p/3 ) X0
+get_structure (atom p)/3 X0
 unify_variable X1
 unify_variable X2
 unify_variable X3
-get_structure (atom f/1 ) X1
+get_structure (atom f)/1 X1
 unify_variable X4
-get_structure (atom h/2 ) X2
+get_structure (atom h)/2 X2
 unify_value X3
 unify_variable X5
-get_structure (atom f/1 ) X5
+get_structure (atom f)/1 X5
 unify_variable X6
-get_structure (atom a/0 ) X6
+get_structure (atom a)/0 X6
 `,
 	},
 }

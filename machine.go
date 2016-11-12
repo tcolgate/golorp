@@ -144,7 +144,7 @@ type Machine struct {
 
 func NewMachine() *Machine {
 	return &Machine{
-		Heap:       make([]Cell, 20),
+		Heap:       make([]Cell, 30),
 		XRegisters: make([]Cell, 10),
 	}
 }
@@ -230,19 +230,19 @@ func SetValue(xi int) (machineFunc, string) {
 
 func GetStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
-		addr := m.deref(m.XRegisters[xi].(StrCell).Ptr)
+		cc := m.derefReg(xi)
 
-		cc := m.Heap[addr]
 		switch c := cc.(type) {
 		case RefCell:
 			m.Heap[m.HReg] = StrCell{m.HReg + 1}
 			m.Heap[m.HReg+1] = FuncCell{fn, n}
 			m.XRegisters[xi] = m.Heap[m.HReg]
-			m.bind(addr, m.HReg)
+			m.bind(cc, m.Heap[m.HReg])
 			m.HReg = m.HReg + 2
 			m.Mode = Write
+			fmt.Printf("IN HERE 0 %#v\n", c)
 		case StrCell:
-			if tc, ok := m.Heap[c.Ptr].(FuncCell); ok && tc.Atom == fn {
+			if tc, ok := m.Heap[c.Ptr].(FuncCell); ok && tc.Atom == fn && tc.n == n {
 				fmt.Printf("IN HERE 1 %v %v %v\n", ok, tc, fn)
 				m.SReg = c.Ptr + 1
 				m.Mode = Read
@@ -303,21 +303,30 @@ func Bind(a1, a2 int) (machineFunc, string) {
 	}, fmt.Sprintf("bind A%d A%d", a1, a2)
 }
 
-func (m *Machine) deref(a int) int {
+func (m *Machine) derefReg(xi int) Cell {
+	switch c := m.XRegisters[xi].(type) {
+	case RefCell:
+		return m.deref(c.Ptr)
+	default:
+		return c
+	}
+}
+
+func (m *Machine) deref(a int) Cell {
 	for {
 		switch c := m.Heap[a].(type) {
 		case RefCell:
 			if c.Ptr == a { // Ref Cell points to itself, unbound
-				return a
+				return m.Heap[a]
 			}
 			a = c.Ptr
 		default:
-			return a
+			return m.Heap[a]
 		}
 	}
 }
 
-func (m *Machine) bind(a, b int) {
+func (m *Machine) bind(a, b Cell) {
 }
 
 func (m *Machine) unify(a1, a2 int) {
@@ -328,14 +337,13 @@ func (m *Machine) unify(a1, a2 int) {
 		d1 := m.deref(m.PDL.pop())
 		d2 := m.deref(m.PDL.pop())
 		if d1 != d2 {
-			t1, t2 := m.Heap[d1], m.Heap[d2]
-			_, ok1 := t1.(RefCell)
-			_, ok2 := t2.(RefCell)
+			_, ok1 := d1.(RefCell)
+			_, ok2 := d2.(RefCell)
 			if ok1 || ok2 {
 				m.bind(d1, d2)
 			} else {
-				v1, ok1 := t1.(StrCell)
-				v2, ok2 := t2.(StrCell)
+				v1, ok1 := d1.(StrCell)
+				v2, ok2 := d2.(StrCell)
 				if !(ok1 && !ok2) {
 					panic("Wrong cell type")
 				}
