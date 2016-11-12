@@ -19,32 +19,39 @@ import (
 	"github.com/tcolgate/golorp/term"
 )
 
+// Cell implements an interface for items that can be stored on the heap
 type Cell interface {
 	IsCell()
 }
 
+// RefCell is a a heap cell containing a reference to another cell
 type RefCell struct {
 	Ptr int
 }
 
+// IsCell marks RefCell as a valid heap Cell
 func (RefCell) IsCell() {
 }
 
+// StrCell is a structure header cell
 type StrCell struct {
 	Ptr int
 }
 
+// IsCell marks StrCell as a valid heap Cell
 func (StrCell) IsCell() {
 }
 
-// FunctorCell is not tagged in WAM-Book, but we need a type
+// FuncCell is not tagged in WAM-Book, but we need a type
 type FuncCell struct {
 	Atom term.Atom
 }
 
+// IsCell marks FuncCell as a valid heap Cell
 func (FuncCell) IsCell() {
 }
 
+// Machine hods the state of our WAM
 type Machine struct {
 	// M0
 	Heap       []Cell
