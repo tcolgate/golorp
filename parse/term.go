@@ -161,8 +161,6 @@ func (p *Parser) readTerm(pri int) (term.Term, error) {
 			return nil, fmt.Errorf("syntax error, unexpected token %#v", l)
 		}
 	}
-
-	return nil, fmt.Errorf("premaature end of stream")
 }
 
 // readRest reads the remaining terms.

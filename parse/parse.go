@@ -33,6 +33,7 @@ type Parser struct {
 	operators OpSet
 }
 
+// Error provides details of a syntax error
 type Error struct {
 	err error
 	tok scan.Token
@@ -67,7 +68,7 @@ func (p *Parser) nextErrorOut(errorOut bool) scan.Token {
 		tok = p.scanner.Next()
 	}
 	if tok.Type == scan.Error && errorOut {
-		fmt.Errorf("%q", tok) // Need a local output writer
+		panic(fmt.Errorf("%q", tok)) // Need a local output writer
 	}
 	p.curTok = tok
 	if tok.Type != scan.Newline {

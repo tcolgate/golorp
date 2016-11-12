@@ -23,27 +23,32 @@ type Cell interface {
 	IsCell()
 }
 
-type RefCell interface {
-	Cell
-	Ptr() Cell
-	Name() string
+type RefCell struct {
+	Ptr int
 }
 
-type StructurCell interface {
-	Cell
-	Ptr() Cell
+func (RefCell) IsCell() {
+}
+
+type StrCell struct {
+	Ptr int
+}
+
+func (StrCell) IsCell() {
 }
 
 // FunctorCell is not tagged in WAM-Book, but we need a type
-type FunctorCell interface {
-	Cell
-	Functor() (term.Atom, int)
+type FuncCell struct {
+	Atom term.Atom
+}
+
+func (FuncCell) IsCell() {
 }
 
 type Machine struct {
 	// M0
 	Heap       []Cell
-	XRegisters []int
+	XRegisters []Cell
 	Mode       InstructionMode
 	HReg       int
 	SReg       int
@@ -102,18 +107,27 @@ func (cs CodeCells) String() string {
 
 func PutStructure(fn term.Atom, xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		m.Heap[m.HReg] = StrCell{m.HReg + 1}
+		m.Heap[m.HReg+1] = FuncCell{fn}
+		m.XRegisters[xi] = m.Heap[m.HReg]
+		m.HReg = m.HReg + 2
 		return nil, ""
 	}, fmt.Sprintf("put_structure %s X%d", fn, xi)
 }
 
 func SetVariable(xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		m.Heap[m.HReg] = RefCell{m.HReg}
+		m.XRegisters[xi] = m.Heap[m.HReg]
+		m.HReg = m.HReg + 1
 		return nil, ""
 	}, fmt.Sprintf("set_variable X%d", xi)
 }
 
 func SetValue(xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		m.Heap[m.HReg] = m.XRegisters[xi]
+		m.HReg = m.HReg + 1
 		return nil, ""
 	}, fmt.Sprintf("set_value X%d", xi)
 }
@@ -148,11 +162,20 @@ func Bind(a1, a2 int) (machineFunc, string) {
 	}, fmt.Sprintf("bind A%d A%d", a1, a2)
 }
 
-func deref(m *Machine, xi int) Cell {
-	return nil
+func deref(m *Machine, xi int) int {
+	for {
+		switch c := m.Heap[xi].(type) {
+		case RefCell:
+			if c.Ptr == xi { // Ref Cell points to itself, unbound
+				return xi
+			}
+			xi = c.Ptr
+		default:
+			return xi
+		}
+	}
 }
 
-// L1
 func Call() (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
 		return nil, ""

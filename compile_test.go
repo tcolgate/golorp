@@ -73,7 +73,7 @@ func TestCompileL0(t *testing.T) {
 
 			cs := compileL0(q, p)
 			if cs.String() != st.res {
-				t.Fatalf("expected: %#s, got: %#s", st.res, cs)
+				t.Fatalf("expected: %s, got: %s", st.res, cs)
 			}
 		})
 	}
