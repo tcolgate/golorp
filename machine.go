@@ -22,6 +22,7 @@ import (
 // Cell implements an interface for items that can be stored on the heap
 type Cell interface {
 	IsCell()
+	fmt.Stringer
 }
 
 // RefCell is a a heap cell containing a reference to another cell
@@ -33,6 +34,10 @@ type RefCell struct {
 func (RefCell) IsCell() {
 }
 
+func (c RefCell) String() string {
+	return fmt.Sprintf("REF %d", c.Ptr)
+}
+
 // StrCell is a structure header cell
 type StrCell struct {
 	Ptr int
@@ -42,6 +47,10 @@ type StrCell struct {
 func (StrCell) IsCell() {
 }
 
+func (c StrCell) String() string {
+	return fmt.Sprintf("STR %d", c.Ptr)
+}
+
 // FuncCell is not tagged in WAM-Book, but we need a type
 type FuncCell struct {
 	Atom term.Atom
@@ -49,6 +58,34 @@ type FuncCell struct {
 
 // IsCell marks FuncCell as a valid heap Cell
 func (FuncCell) IsCell() {
+}
+
+func (c FuncCell) String() string {
+	return fmt.Sprintf("%s", c.Atom)
+}
+
+// HeapCells is a utility type to format a slice of
+// cells as a heap
+type HeapCells []Cell
+
+func (cs HeapCells) String() string {
+	str := ""
+	for i, c := range cs {
+		str += fmt.Sprintf("%d %s\n", i, c)
+	}
+	return str
+}
+
+// RegCells is a utility type to format a slice of
+// cells as a X registers
+type RegCells []Cell
+
+func (cs RegCells) String() string {
+	str := ""
+	for i, c := range cs {
+		str += fmt.Sprintf("X%d  = %s\n", i, c)
+	}
+	return str
 }
 
 // Machine hods the state of our WAM
@@ -82,6 +119,23 @@ type Machine struct {
 	// Optimisations
 }
 
+func NewMachine() *Machine {
+	return &Machine{
+		Heap:       make([]Cell, 20),
+		XRegisters: make([]Cell, 10),
+	}
+}
+
+func (m *Machine) String() string {
+	str := "HEAP:\n"
+	str += fmt.Sprintf("%s\n", HeapCells(m.Heap))
+	str += "X Registers:\n"
+	str += fmt.Sprintf("%s\n", RegCells(m.XRegisters))
+	str += fmt.Sprintf("H: %d S: %d\n", m.HReg, m.SReg)
+
+	return str
+}
+
 type Environment Cell
 type ChoicePoint Cell
 
@@ -108,6 +162,13 @@ func (cs CodeCells) String() string {
 		str += fmt.Sprintf("%s\n", i.string)
 	}
 	return str
+}
+
+func (m *Machine) run(cs []CodeCell) {
+	for _, c := range cs {
+		fmt.Printf("%s\n", c.string)
+		c.fn(m)
+	}
 }
 
 // I0 - M0 insutrctions for L0
