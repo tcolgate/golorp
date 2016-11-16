@@ -25,9 +25,25 @@ type Cell interface {
 	fmt.Stringer
 }
 
+type CellPtr struct {
+	Store  *[]Cell
+	Offset int
+}
+
+func (c CellPtr) Cell() Cell {
+	return (*c.Store)[c.Offset]
+}
+
+func (c CellPtr) IsSelf() bool {
+	if r, ok := c.Cell().(RefCell); ok {
+		return r.Ptr.Store == c.Store && r.Ptr.Offset == c.Offset
+	}
+	return false
+}
+
 // RefCell is a a heap cell containing a reference to another cell
 type RefCell struct {
-	Ptr int
+	Ptr CellPtr
 }
 
 // IsCell marks RefCell as a valid heap Cell
@@ -40,7 +56,11 @@ func (c RefCell) String() string {
 
 // StrCell is a structure header cell
 type StrCell struct {
-	Ptr int
+	Ptr CellPtr
+}
+
+func (cp CellPtr) String() string {
+	return fmt.Sprintf("STR %v:%d", cp.Store, cp.Offset)
 }
 
 // IsCell marks StrCell as a valid heap Cell
@@ -48,7 +68,7 @@ func (StrCell) IsCell() {
 }
 
 func (c StrCell) String() string {
-	return fmt.Sprintf("STR %d", c.Ptr)
+	return fmt.Sprintf("STR %s", c.Ptr.Offset)
 }
 
 // FuncCell is not tagged in WAM-Book, but we need a type
@@ -89,7 +109,7 @@ func (cs RegCells) String() string {
 	return str
 }
 
-type PDL []int
+type PDL []CellPtr
 
 func (p PDL) isEmpty() bool {
 	if len(p) > 0 {
@@ -98,11 +118,11 @@ func (p PDL) isEmpty() bool {
 	return true
 }
 
-func (p PDL) push(a int) {
+func (p PDL) push(a CellPtr) {
 	p = append(p, a)
 }
 
-func (p PDL) pop() int {
+func (p PDL) pop() CellPtr {
 	a := p[len(p)-1]
 	p = p[:len(p)-1]
 	return a
@@ -203,7 +223,7 @@ func (m *Machine) run(cs []CodeCell) {
 
 func PutStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
-		m.Heap[m.HReg] = StrCell{m.HReg + 1}
+		m.Heap[m.HReg] = StrCell{CellPtr{&m.Heap, m.HReg + 1}}
 		m.Heap[m.HReg+1] = FuncCell{fn, n}
 		m.XRegisters[xi] = m.Heap[m.HReg]
 		m.HReg = m.HReg + 2
@@ -213,7 +233,7 @@ func PutStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 
 func SetVariable(xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
-		m.Heap[m.HReg] = RefCell{m.HReg}
+		m.Heap[m.HReg] = RefCell{CellPtr{&m.Heap, m.HReg}}
 		m.XRegisters[xi] = m.Heap[m.HReg]
 		m.HReg = m.HReg + 1
 		return nil, ""
@@ -234,7 +254,7 @@ func GetStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 
 		switch c := cc.(type) {
 		case RefCell:
-			m.Heap[m.HReg] = StrCell{m.HReg + 1}
+			m.Heap[m.HReg] = StrCell{CellPtr{&m.Heap, m.HReg + 1}}
 			m.Heap[m.HReg+1] = FuncCell{fn, n}
 			m.XRegisters[xi] = m.Heap[m.HReg]
 			m.bind(cc, m.Heap[m.HReg])
@@ -242,9 +262,9 @@ func GetStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 			m.Mode = Write
 			fmt.Printf("IN HERE 0 %#v\n", c)
 		case StrCell:
-			if tc, ok := m.Heap[c.Ptr].(FuncCell); ok && tc.Atom == fn && tc.n == n {
+			if tc, ok := m.Heap[c.Ptr.Offset].(FuncCell); ok && tc.Atom == fn && tc.n == n {
 				fmt.Printf("IN HERE 1 %v %v %v\n", ok, tc, fn)
-				m.SReg = c.Ptr + 1
+				m.SReg = c.Ptr.Offset + 1
 				m.Mode = Read
 			} else {
 				fmt.Printf("IN HERE 2 %v %v %v\n", ok, tc, fn)
@@ -266,7 +286,7 @@ func UnifyVariable(xi int) (machineFunc, string) {
 		case Read:
 			m.XRegisters[xi] = m.Heap[m.SReg]
 		case Write:
-			m.Heap[m.HReg] = RefCell{m.HReg}
+			m.Heap[m.HReg] = RefCell{CellPtr{&m.Heap, m.HReg}}
 			m.XRegisters[xi] = m.Heap[m.HReg]
 			m.HReg = m.HReg + 1
 		default:
@@ -280,7 +300,7 @@ func UnifyValue(xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
 		switch m.Mode {
 		case Read:
-			m.unify(xi, m.SReg)
+			m.unify(CellPtr{&m.XRegisters, xi}, CellPtr{&m.Heap, m.SReg})
 		case Write:
 			m.Heap[m.HReg] = m.XRegisters[xi]
 			m.HReg = m.HReg + 1
@@ -312,26 +332,26 @@ func (m *Machine) derefReg(xi int) Cell {
 	}
 }
 
-func (m *Machine) deref(a int) Cell {
+func (m *Machine) deref(p CellPtr) Cell {
 	for {
-		switch c := m.Heap[a].(type) {
+		switch c := (*p.Store)[p.Offset].(type) {
 		case RefCell:
-			if c.Ptr == a { // Ref Cell points to itself, unbound
-				return m.Heap[a]
+			if c.Ptr == p { // Ref Cell points to itself, unbound
+				return c
 			}
-			a = c.Ptr
+			p = c.Ptr
 		default:
-			return m.Heap[a]
+			return c
 		}
 	}
 }
 
-func (m *Machine) bind(a, b Cell) {
-	r1, ok1 := a.(RefCell)
-	r2, ok2 := b.(RefCell)
+func (m *Machine) bind(a, b CellPtr) {
+	//r1, ok1 := a.(RefCell)
+	//r2, ok2 := b.(RefCell)
 }
 
-func (m *Machine) unify(a1, a2 int) {
+func (m *Machine) unify(a1, a2 CellPtr) {
 	m.PDL.push(a1)
 	m.PDL.push(a2)
 	fail := false
@@ -349,15 +369,15 @@ func (m *Machine) unify(a1, a2 int) {
 				if !(ok1 && !ok2) {
 					panic("Wrong cell type")
 				}
-				f1, ok1 := m.Heap[v1.Ptr].(FuncCell)
-				f2, ok2 := m.Heap[v2.Ptr].(FuncCell)
+				f1, ok1 := v1.Ptr.Cell().(FuncCell)
+				f2, ok2 := v2.Ptr.Cell().(FuncCell)
 				if !(ok1 && !ok2) {
 					panic("Wrong cell type")
 				}
 				if f1.Atom == f2.Atom && f1.n == f2.n {
 					for i := 0; i < f1.n; i++ {
-						m.PDL.push(v1.Ptr + i)
-						m.PDL.push(v2.Ptr + i)
+						m.PDL.push(CellPtr{v1.Ptr.Store, v1.Ptr.Offset + i})
+						m.PDL.push(CellPtr{v2.Ptr.Store, v1.Ptr.Offset + i})
 					}
 				} else {
 					fail = true
