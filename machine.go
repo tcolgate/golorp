@@ -250,14 +250,15 @@ func SetValue(xi int) (machineFunc, string) {
 
 func GetStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
-		cc := m.derefReg(xi)
+		cp := m.derefReg(xi)
+		cc := (*cp.Store)[cp.Offset]
 
 		switch c := cc.(type) {
 		case RefCell:
 			m.Heap[m.HReg] = StrCell{CellPtr{&m.Heap, m.HReg + 1}}
 			m.Heap[m.HReg+1] = FuncCell{fn, n}
 			m.XRegisters[xi] = m.Heap[m.HReg]
-			m.bind(cc, m.Heap[m.HReg])
+			m.bind(CellPtr{&m.XRegisters, xi}, CellPtr{&m.Heap, m.HReg})
 			m.HReg = m.HReg + 2
 			m.Mode = Write
 			fmt.Printf("IN HERE 0 %#v\n", c)
@@ -323,32 +324,50 @@ func Bind(a1, a2 int) (machineFunc, string) {
 	}, fmt.Sprintf("bind A%d A%d", a1, a2)
 }
 
-func (m *Machine) derefReg(xi int) Cell {
+func (m *Machine) derefReg(xi int) CellPtr {
 	switch c := m.XRegisters[xi].(type) {
 	case RefCell:
 		return m.deref(c.Ptr)
 	default:
-		return c
+		return CellPtr{&m.XRegisters, xi}
 	}
 }
 
-func (m *Machine) deref(p CellPtr) Cell {
+func (m *Machine) deref(p CellPtr) CellPtr {
 	for {
 		switch c := (*p.Store)[p.Offset].(type) {
 		case RefCell:
 			if c.Ptr == p { // Ref Cell points to itself, unbound
-				return c
+				return p
 			}
 			p = c.Ptr
 		default:
-			return c
+			return p
 		}
 	}
 }
 
 func (m *Machine) bind(a, b CellPtr) {
-	//r1, ok1 := a.(RefCell)
-	//r2, ok2 := b.(RefCell)
+	fmt.Printf("HEAP: %p\n", &m.Heap)
+	fmt.Printf("XReg: %p\n", &m.XRegisters)
+	fmt.Printf("PDL: %p\n", &m.PDL)
+	fmt.Printf("BIND: %#v %#v\n", a, b)
+	_, ok1 := (*a.Store)[a.Offset].(RefCell)
+	_, ok2 := (*b.Store)[b.Offset].(RefCell)
+	fmt.Printf("C1: %#v\n", (*a.Store)[a.Offset])
+	fmt.Printf("C2: %#v\n", (*b.Store)[b.Offset])
+
+	switch {
+	case ok1 && ok2:
+	case ok1:
+		fmt.Print("bind a to b")
+		(*a.Store)[a.Offset] = (*b.Store)[b.Offset]
+	case ok2:
+		fmt.Print("bind b to a")
+		(*b.Store)[b.Offset] = (*a.Store)[a.Offset]
+	default:
+		panic("didn't manage to fix-up bind")
+	}
 }
 
 func (m *Machine) unify(a1, a2 CellPtr) {
@@ -356,13 +375,15 @@ func (m *Machine) unify(a1, a2 CellPtr) {
 	m.PDL.push(a2)
 	fail := false
 	for !(m.PDL.isEmpty() || fail) {
-		d1 := m.deref(m.PDL.pop())
-		d2 := m.deref(m.PDL.pop())
+		p1 := m.deref(m.PDL.pop())
+		d1 := (*p1.Store)[p1.Offset]
+		p2 := m.deref(m.PDL.pop())
+		d2 := (*p2.Store)[p2.Offset]
 		if d1 != d2 {
 			_, ok1 := d1.(RefCell)
 			_, ok2 := d2.(RefCell)
 			if ok1 || ok2 {
-				m.bind(d1, d2)
+				//m.bind(d1, d2)
 			} else {
 				v1, ok1 := d1.(StrCell)
 				v2, ok2 := d2.(StrCell)
