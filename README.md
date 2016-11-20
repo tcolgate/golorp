@@ -8,3 +8,6 @@ please see https://github.com/mndrix/golog
 
 So far I have a lexer that seems to approximate SWI, and
 should be Unicode friendly.
+
+The WAM implementation is working for L0 of the WAM Book.
+
