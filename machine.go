@@ -411,7 +411,7 @@ func (m *Machine) unify(a1, a2 CellPtr) {
 	}
 }
 
-func Call() (machineFunc, string) {
+func Call(fn term.Atom) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
 		return nil, ""
 	}, fmt.Sprintf("call")
@@ -423,28 +423,35 @@ func Proceeed() (machineFunc, string) {
 	}, fmt.Sprintf("proceed")
 }
 
-func PutVariable() (machineFunc, string) {
+func PutVariable(xn, ai int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		m.Heap[m.HReg] = RefCell{CellPtr{&m.Heap, m.HReg}}
+		m.XRegisters[xn] = m.Heap[m.HReg]
+		m.XRegisters[ai] = m.Heap[m.HReg]
+		m.HReg = m.HReg + 1
 		return nil, ""
-	}, fmt.Sprintf("put_variable")
+	}, fmt.Sprintf("put_variable X%d, A%d", xn, ai)
 }
 
-func PutValue() (machineFunc, string) {
+func PutValue(xn, ai int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		m.XRegisters[ai] = m.XRegisters[xn]
 		return nil, ""
-	}, fmt.Sprintf("put_value")
+	}, fmt.Sprintf("put_value X%d, A%d", xn, ai)
 }
 
-func GetVariable() (machineFunc, string) {
+func GetVariable(xn, ai int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		m.XRegisters[xn] = m.XRegisters[ai]
 		return nil, ""
-	}, fmt.Sprintf("get_variable")
+	}, fmt.Sprintf("get_variable X%d, A%d", xn, ai)
 }
 
-func GetValue() (machineFunc, string) {
+func GetValue(xn, ai int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		m.unify(CellPtr{&m.XRegisters, xn}, CellPtr{&m.XRegisters, ai})
 		return nil, ""
-	}, fmt.Sprintf("get_value")
+	}, fmt.Sprintf("get_value X%d, A%d", xn, ai)
 }
 
 // L2
