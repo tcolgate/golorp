@@ -326,18 +326,6 @@ func UnifyValue(xi int) (machineFunc, string) {
 	}, fmt.Sprintf("unify_value X%d", xi)
 }
 
-func Unify(a1, a2 int) (machineFunc, string) {
-	return func(m *Machine) (machineFunc, string) {
-		return nil, ""
-	}, fmt.Sprintf("unify A%d, A%d", a1, a2)
-}
-
-func Bind(a1, a2 int) (machineFunc, string) {
-	return func(m *Machine) (machineFunc, string) {
-		return nil, ""
-	}, fmt.Sprintf("bind A%d A%d", a1, a2)
-}
-
 func (m *Machine) derefReg(xi int) CellPtr {
 	switch c := m.XRegisters[xi].(type) {
 	case RefCell:
@@ -389,8 +377,7 @@ func (m *Machine) bind(a, b CellPtr) {
 func (m *Machine) unify(a1, a2 CellPtr) {
 	m.PDL.push(a1)
 	m.PDL.push(a2)
-	fail := false
-	for !(m.PDL.isEmpty() || fail) {
+	for !(m.PDL.isEmpty() || m.Failed) {
 		p1 := m.deref(m.PDL.pop())
 		d1 := (*p1.Store)[p1.Offset]
 		p2 := m.deref(m.PDL.pop())
@@ -417,7 +404,7 @@ func (m *Machine) unify(a1, a2 CellPtr) {
 						m.PDL.push(CellPtr{v2.Ptr.Store, v1.Ptr.Offset + i})
 					}
 				} else {
-					fail = true
+					m.Failed = true
 				}
 			}
 		}
