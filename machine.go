@@ -41,6 +41,14 @@ func (c CellPtr) IsSelf() bool {
 	return false
 }
 
+func (cp CellPtr) String() string {
+	return fmt.Sprintf("PTR %v:%d", cp.Store, cp.Offset)
+}
+
+func (cp CellPtr) Deref() Cell {
+	return (*cp.Store)[cp.Offset]
+}
+
 // RefCell is a a heap cell containing a reference to another cell
 type RefCell struct {
 	Ptr CellPtr
@@ -51,7 +59,7 @@ func (RefCell) IsCell() {
 }
 
 func (c RefCell) String() string {
-	return fmt.Sprintf("REF %d", c.Ptr)
+	return fmt.Sprintf("REF %p:%d", c.Ptr.Store, c.Ptr.Offset)
 }
 
 // StrCell is a structure header cell
@@ -59,16 +67,12 @@ type StrCell struct {
 	Ptr CellPtr
 }
 
-func (cp CellPtr) String() string {
-	return fmt.Sprintf("STR %v:%d", cp.Store, cp.Offset)
-}
-
 // IsCell marks StrCell as a valid heap Cell
 func (StrCell) IsCell() {
 }
 
 func (c StrCell) String() string {
-	return fmt.Sprintf("STR %s", c.Ptr.Offset)
+	return fmt.Sprintf("STR %p:%d", c.Ptr.Store, c.Ptr.Offset)
 }
 
 // FuncCell is not tagged in WAM-Book, but we need a type
@@ -109,23 +113,30 @@ func (cs RegCells) String() string {
 	return str
 }
 
-type PDL []CellPtr
+type PDL struct {
+	cells []CellPtr
+}
 
-func (p PDL) isEmpty() bool {
-	if len(p) > 0 {
+func (p *PDL) isEmpty() bool {
+	if len(p.cells) > 0 {
 		return false
 	}
 	return true
 }
 
-func (p PDL) push(a CellPtr) {
-	p = append(p, a)
+func (p *PDL) push(a CellPtr) {
+	p.cells = append(p.cells, a)
 }
 
-func (p PDL) pop() CellPtr {
-	a := p[len(p)-1]
-	p = p[:len(p)-1]
+func (p *PDL) pop() CellPtr {
+	a := p.cells[len(p.cells)-1]
+	p.cells = p.cells[:len(p.cells)-1]
 	return a
+}
+
+type CellStore struct {
+	Name  string
+	Cells []Cell
 }
 
 // Machine hods the state of our WAM
@@ -166,6 +177,7 @@ func NewMachine() *Machine {
 	return &Machine{
 		Heap:       make([]Cell, 30),
 		XRegisters: make([]Cell, 10),
+		PDL:        PDL{[]CellPtr{}},
 	}
 }
 
@@ -251,17 +263,17 @@ func SetValue(xi int) (machineFunc, string) {
 func GetStructure(fn term.Atom, n, xi int) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
 		cp := m.derefReg(xi)
-		cc := (*cp.Store)[cp.Offset]
+		cc := cp.Deref()
 
 		switch c := cc.(type) {
 		case RefCell:
 			m.Heap[m.HReg] = StrCell{CellPtr{&m.Heap, m.HReg + 1}}
 			m.Heap[m.HReg+1] = FuncCell{fn, n}
 			m.XRegisters[xi] = m.Heap[m.HReg]
-			m.bind(CellPtr{&m.XRegisters, xi}, CellPtr{&m.Heap, m.HReg})
+			m.bind(cp, CellPtr{&m.Heap, m.HReg})
 			m.HReg = m.HReg + 2
 			m.Mode = Write
-			fmt.Printf("IN HERE 0 %#v\n", c)
+			fmt.Printf("IN HERE 0 %#v\n", cp.Deref())
 		case StrCell:
 			if tc, ok := m.Heap[c.Ptr.Offset].(FuncCell); ok && tc.Atom == fn && tc.n == n {
 				fmt.Printf("IN HERE 1 %v %v %v\n", ok, tc, fn)
@@ -293,6 +305,7 @@ func UnifyVariable(xi int) (machineFunc, string) {
 		default:
 			panic(fmt.Errorf("invalid read/write mode %v", m.Mode))
 		}
+		m.SReg = m.SReg + 1
 		return nil, ""
 	}, fmt.Sprintf("unify_variable X%d", xi)
 }
@@ -308,6 +321,7 @@ func UnifyValue(xi int) (machineFunc, string) {
 		default:
 			panic(fmt.Errorf("invalid read/write mode %v", m.Mode))
 		}
+		m.SReg = m.SReg + 1
 		return nil, ""
 	}, fmt.Sprintf("unify_value X%d", xi)
 }
@@ -359,11 +373,13 @@ func (m *Machine) bind(a, b CellPtr) {
 
 	switch {
 	case ok1 && ok2:
+		fmt.Print("arbitrarily bind a to b\n")
+		(*a.Store)[a.Offset] = (*b.Store)[b.Offset]
 	case ok1:
-		fmt.Print("bind a to b")
+		fmt.Print("bind a to b\n")
 		(*a.Store)[a.Offset] = (*b.Store)[b.Offset]
 	case ok2:
-		fmt.Print("bind b to a")
+		fmt.Print("bind b to a\n")
 		(*b.Store)[b.Offset] = (*a.Store)[a.Offset]
 	default:
 		panic("didn't manage to fix-up bind")
@@ -383,16 +399,16 @@ func (m *Machine) unify(a1, a2 CellPtr) {
 			_, ok1 := d1.(RefCell)
 			_, ok2 := d2.(RefCell)
 			if ok1 || ok2 {
-				//m.bind(d1, d2)
+				m.bind(p1, p2)
 			} else {
 				v1, ok1 := d1.(StrCell)
 				v2, ok2 := d2.(StrCell)
-				if !(ok1 && !ok2) {
+				if !(ok1 && ok2) {
 					panic("Wrong cell type")
 				}
 				f1, ok1 := v1.Ptr.Cell().(FuncCell)
 				f2, ok2 := v2.Ptr.Cell().(FuncCell)
-				if !(ok1 && !ok2) {
+				if !(ok1 && ok2) {
 					panic("Wrong cell type")
 				}
 				if f1.Atom == f2.Atom && f1.n == f2.n {
