@@ -15,35 +15,34 @@ package parse
 
 import (
 	"bytes"
-	"log"
+	"fmt"
 	"testing"
 
 	"github.com/tcolgate/golorp/context"
 	"github.com/tcolgate/golorp/scan"
-	"github.com/tcolgate/golorp/term"
 )
 
 type test struct {
 	name string
 	src  string
-	exp  []term.Term
+	exp  string
 }
 
 var tests = []test{
-	{"clause0", `likes.`, []term.Term{}},
-	{"clause1", `1 + 2.`, []term.Term{}},
-	{"clause1", `2 / 3.`, []term.Term{}},
-	{"clause2", `print(1 + 2 + 3 + 4 + 5).`, []term.Term{}},
-	{"clause2", `1 + (2 * 3).`, []term.Term{}},
-	{"clause3", `-2.`, []term.Term{}},
-	{"clause4", `likes(sam).`, []term.Term{}},
-	{"clause5", `likes(sam,Food).`, []term.Term{}},
-	{"clause6", `likes(sam,orange).`, []term.Term{}},
-	{"clause7", `likes(sam,_).`, []term.Term{}},
-	{"clause8", `likes/2(sam,__thing).`, []term.Term{}},
-	{"clause9", `likes/2(sam,Thing) :- yummy(Thing).`, []term.Term{}},
-	{"clause10", `eatenChocs(tristan,1000000).`, []term.Term{}},
-	{"clause11", `eatenChocs(tristan + 4,1000000).`, []term.Term{}},
+	{"clause0", `likes.`, `("likes"/0 [])`},
+	{"clause1", `1 + 2.`, `("+"/2 [(number 1) (number 2)])`},
+	{"clause1", `2 / 3.`, `("/"/2 [(number 2) (number 3)])`},
+	{"clause2", `print(1 + 2 + 3 + 4 + 5).`, `("print"/1 [("+"/2 [("+"/2 [("+"/2 [("+"/2 [(number 1) (number 2)]) (number 3)]) (number 4)]) (number 5)])])`},
+	{"clause2", `1 + (2 * 3).`, `("+"/2 [(number 1) ("*"/2 [(number 2) (number 3)])])`},
+	{"clause3", `-2.`, `("-"/1 [(number 2)])`},
+	{"clause4", `likes(sam).`, `("likes"/1 [("sam"/0 [])])`},
+	{"clause5", `likes(sam,Food).`, `("likes"/2 [("sam"/0 []) (var Food)])`},
+	{"clause6", `likes(sam,orange).`, `("likes"/2 [("sam"/0 []) ("orange"/0 [])])`},
+	{"clause7", `likes(sam,_).`, `("likes"/2 [("sam"/0 []) (var _)])`},
+	{"clause8", `likes/2(sam,__thing).`, `("likes/2"/2 [("sam"/0 []) (var __thing)])`},
+	{"clause9", `likes/2(sam,Thing) :- yummy(Thing).`, `(":-"/2 [("likes/2"/2 [("sam"/0 []) (var Thing)]) ("yummy"/1 [(var Thing)])])`},
+	{"clause10", `eatenChocs(tristan,1000000).`, `("eatenChocs"/2 [("tristan"/0 []) (number 1e+06)])`},
+	{"clause11", `eatenChocs(tristan + 4,1000000).`, `("eatenChocs"/2 [("+"/2 [("tristan"/0 []) (number 4)]) (number 1e+06)])`},
 }
 
 func TestNew(t *testing.T) {
@@ -53,8 +52,11 @@ func TestNew(t *testing.T) {
 			s := scan.New(ctx, "file.pl", bytes.NewBuffer([]byte(st.src)))
 			p := New("file.pl", s)
 
-			t0, err := p.NextTerm()
-			log.Println(t0, err)
+			t0, _ := p.NextTerm()
+			str := fmt.Sprintf("%v", t0)
+			if str != st.exp {
+				t.Fatalf("\nexpected: %#v\ngot: %#v", st.exp, str)
+			}
 		})
 	}
 }
