@@ -84,8 +84,9 @@ type stateFn func(*Scanner) stateFn
 
 // Scanner holds the state of the scanner.
 type Scanner struct {
+	context context.Context
+
 	tokens     chan Token // channel of scanned items
-	context    context.Context
 	r          io.ByteReader
 	done       bool
 	name       string // the name of the input; used only for error reports

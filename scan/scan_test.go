@@ -28,27 +28,27 @@ type test struct {
 }
 
 var tests = []test{
-	{"single", "/* This is a test */", []Token{Token{Type: 3, Line: 1, Text: "/* This is a test */"}}},
-	{"line", "% This is a test", []Token{Token{Type: 3, Line: 1, Text: "% This is a test"}}},
+	{"single", "/* This is a test */", []Token{Token{Type: Comment, Line: 1, Text: "/* This is a test */"}}},
+	{"line", "% This is a test", []Token{Token{Type: Comment, Line: 1, Text: "% This is a test"}}},
 	{"mixed", `% This is a test
 % This is a test
 % This is a test
 /* This is also %
-  a test */`, []Token{Token{Type: 3, Line: 1, Text: "% This is a test\n"}, Token{Type: 3, Line: 1, Text: "% This is a test\n"}, Token{Type: 3, Line: 1, Text: "% This is a test\n"}, Token{Type: 3, Line: 1, Text: "/* This is also %\n  a test */"}}},
-	{"atom0", `cheese`, []Token{Token{Type: 5, Line: 1, Text: "cheese"}}},
-	{"atom0", `cheese123`, []Token{Token{Type: 5, Line: 1, Text: "cheese123"}}},
-	{"atom0", `cheeseAndSalami`, []Token{Token{Type: 5, Line: 1, Text: "cheeseAndSalami"}}},
-	{"atom0", `cheese_a_thing`, []Token{Token{Type: 5, Line: 1, Text: "cheese_a_thing"}}},
-	{"atom1", `'this atom'`, []Token{Token{Type: 5, Line: 1, Text: "'this atom'"}}},
-	{"atom2", `'this \' atom'`, []Token{Token{Type: 5, Line: 1, Text: "'this \\' atom'"}}},
-	{"variable0", `X`, []Token{Token{Type: 8, Line: 1, Text: "X"}}},
-	{"variable1", `Food`, []Token{Token{Type: 8, Line: 1, Text: "Food"}}},
-	{"cluase0", `likes(sam,Food).`, []Token{Token{Type: 6, Line: 1, Text: "likes"}, Token{Type: 13, Line: 1, Text: "("}, Token{Type: 5, Line: 1, Text: "sam"}, Token{Type: 16, Line: 1, Text: ","}, Token{Type: 8, Line: 1, Text: "Food"}, Token{Type: 14, Line: 1, Text: ")"}, Token{Type: 15, Line: 1, Text: "."}}},
-	{"cluase1", `likes(sam,orange).`, []Token{Token{Type: 6, Line: 1, Text: "likes"}, Token{Type: 13, Line: 1, Text: "("}, Token{Type: 5, Line: 1, Text: "sam"}, Token{Type: 16, Line: 1, Text: ","}, Token{Type: 5, Line: 1, Text: "orange"}, Token{Type: 14, Line: 1, Text: ")"}, Token{Type: 15, Line: 1, Text: "."}}},
-	{"cluase2", `likes(sam,_).`, []Token{Token{Type: 6, Line: 1, Text: "likes"}, Token{Type: 13, Line: 1, Text: "("}, Token{Type: 5, Line: 1, Text: "sam"}, Token{Type: 16, Line: 1, Text: ","}, Token{Type: 9, Line: 1, Text: "_"}, Token{Type: 14, Line: 1, Text: ")"}, Token{Type: 15, Line: 1, Text: "."}}},
-	{"cluase2", `likes/2(sam,__thing).`, []Token{Token{Type: 6, Line: 1, Text: "likes/2"}, Token{Type: 13, Line: 1, Text: "("}, Token{Type: 5, Line: 1, Text: "sam"}, Token{Type: 16, Line: 1, Text: ","}, Token{Type: 8, Line: 1, Text: "__thing"}, Token{Type: 14, Line: 1, Text: ")"}, Token{Type: 15, Line: 1, Text: "."}}},
-	{"cluase4", `likes/2(sam,Thing) :- yummy(Thing).`, []Token{Token{Type: 6, Line: 1, Text: "likes/2"}, Token{Type: 13, Line: 1, Text: "("}, Token{Type: 5, Line: 1, Text: "sam"}, Token{Type: 16, Line: 1, Text: ","}, Token{Type: 8, Line: 1, Text: "Thing"}, Token{Type: 14, Line: 1, Text: ")"}, Token{Type: 7, Line: 1, Text: ":-"}, Token{Type: 6, Line: 1, Text: "yummy"}, Token{Type: 13, Line: 1, Text: "("}, Token{Type: 8, Line: 1, Text: "Thing"}, Token{Type: 14, Line: 1, Text: ")"}, Token{Type: 15, Line: 1, Text: "."}}},
-	{"cluase5", `eatenChocs(tristan,1000000).`, []Token{Token{Type: 6, Line: 1, Text: "eatenChocs"}, Token{Type: 13, Line: 1, Text: "("}, Token{Type: 5, Line: 1, Text: "tristan"}, Token{Type: 16, Line: 1, Text: ","}, Token{Type: 4, Line: 1, Text: "1000000"}, Token{Type: 14, Line: 1, Text: ")"}, Token{Type: 15, Line: 1, Text: "."}}},
+  a test */`, []Token{Token{Type: Comment, Line: 1, Text: "% This is a test\n"}, Token{Type: Comment, Line: 1, Text: "% This is a test\n"}, Token{Type: Comment, Line: 1, Text: "% This is a test\n"}, Token{Type: Comment, Line: 1, Text: "/* This is also %\n  a test */"}}},
+	{"atom0", `cheese`, []Token{Token{Type: Atom, Line: 1, Text: "cheese"}}},
+	{"atom0", `cheese123`, []Token{Token{Type: Atom, Line: 1, Text: "cheese123"}}},
+	{"atom0", `cheeseAndSalami`, []Token{Token{Type: Atom, Line: 1, Text: "cheeseAndSalami"}}},
+	{"atom0", `cheese_a_thing`, []Token{Token{Type: Atom, Line: 1, Text: "cheese_a_thing"}}},
+	{"atom1", `'this atom'`, []Token{Token{Type: Atom, Line: 1, Text: "'this atom'"}}},
+	{"atom2", `'this \' atom'`, []Token{Token{Type: Atom, Line: 1, Text: "'this \\' atom'"}}},
+	{"variable0", `X`, []Token{Token{Type: Variable, Line: 1, Text: "X"}}},
+	{"variable1", `Food`, []Token{Token{Type: Variable, Line: 1, Text: "Food"}}},
+	{"cluase0", `likes(sam,Food).`, []Token{Token{Type: FunctorAtom, Line: 1, Text: "likes"}, Token{Type: LeftParen, Line: 1, Text: "("}, Token{Type: Atom, Line: 1, Text: "sam"}, Token{Type: Comma, Line: 1, Text: ","}, Token{Type: Variable, Line: 1, Text: "Food"}, Token{Type: RightParen, Line: 1, Text: ")"}, Token{Type: Stop, Line: 1, Text: "."}}},
+	{"cluase1", `likes(sam,orange).`, []Token{Token{Type: FunctorAtom, Line: 1, Text: "likes"}, Token{Type: LeftParen, Line: 1, Text: "("}, Token{Type: Atom, Line: 1, Text: "sam"}, Token{Type: Comma, Line: 1, Text: ","}, Token{Type: Atom, Line: 1, Text: "orange"}, Token{Type: RightParen, Line: 1, Text: ")"}, Token{Type: Stop, Line: 1, Text: "."}}},
+	{"cluase2", `likes(sam,_).`, []Token{Token{Type: FunctorAtom, Line: 1, Text: "likes"}, Token{Type: LeftParen, Line: 1, Text: "("}, Token{Type: Atom, Line: 1, Text: "sam"}, Token{Type: Comma, Line: 1, Text: ","}, Token{Type: Unbound, Line: 1, Text: "_"}, Token{Type: RightParen, Line: 1, Text: ")"}, Token{Type: Stop, Line: 1, Text: "."}}},
+	{"cluase2", `likes/2(sam,__thing).`, []Token{Token{Type: FunctorAtom, Line: 1, Text: "likes/2"}, Token{Type: LeftParen, Line: 1, Text: "("}, Token{Type: Atom, Line: 1, Text: "sam"}, Token{Type: Comma, Line: 1, Text: ","}, Token{Type: Variable, Line: 1, Text: "__thing"}, Token{Type: RightParen, Line: 1, Text: ")"}, Token{Type: Stop, Line: 1, Text: "."}}},
+	{"cluase4", `likes/2(sam,Thing) :- yummy(Thing).`, []Token{Token{Type: FunctorAtom, Line: 1, Text: "likes/2"}, Token{Type: LeftParen, Line: 1, Text: "("}, Token{Type: Atom, Line: 1, Text: "sam"}, Token{Type: Comma, Line: 1, Text: ","}, Token{Type: Variable, Line: 1, Text: "Thing"}, Token{Type: RightParen, Line: 1, Text: ")"}, Token{Type: SpecialAtom, Line: 1, Text: ":-"}, Token{Type: FunctorAtom, Line: 1, Text: "yummy"}, Token{Type: LeftParen, Line: 1, Text: "("}, Token{Type: Variable, Line: 1, Text: "Thing"}, Token{Type: RightParen, Line: 1, Text: ")"}, Token{Type: Stop, Line: 1, Text: "."}}},
+	{"cluase5", `eatenChocs(tristan,1000000).`, []Token{Token{Type: FunctorAtom, Line: 1, Text: "eatenChocs"}, Token{Type: LeftParen, Line: 1, Text: "("}, Token{Type: Atom, Line: 1, Text: "tristan"}, Token{Type: Comma, Line: 1, Text: ","}, Token{Type: Number, Line: 1, Text: "1000000"}, Token{Type: RightParen, Line: 1, Text: ")"}, Token{Type: Stop, Line: 1, Text: "."}}},
 }
 
 func TestNew(t *testing.T) {
@@ -67,7 +67,7 @@ func TestNew(t *testing.T) {
 					ts = append(ts, l)
 				}
 				if !reflect.DeepEqual(st.exp, ts) {
-					t.Fatalf("expected: %#v, got: %#v", st.exp, ts)
+					t.Fatalf("\nexpected: %#v\ngot: %#v", st.exp, ts)
 				}
 			})
 		}(st)
