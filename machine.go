@@ -413,6 +413,12 @@ func (m *Machine) unify(a1, a2 CellPtr) {
 
 func Call(fn term.Atom) (machineFunc, string) {
 	return func(m *Machine) (machineFunc, string) {
+		loc, ok := m.Labels[fn.String()]
+		if !ok {
+			panic(fmt.Errorf("call to unknown label, %s", fn.String()))
+		}
+
+		m.PReg = loc
 		return nil, ""
 	}, fmt.Sprintf("call")
 }

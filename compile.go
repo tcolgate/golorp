@@ -1,6 +1,10 @@
 package golorp
 
-import "github.com/tcolgate/golorp/term"
+import (
+	"fmt"
+
+	"github.com/tcolgate/golorp/term"
+)
 
 type streamToken struct {
 	fn string // functor name
@@ -10,15 +14,15 @@ type streamToken struct {
 }
 
 // Compile a single query, and a program
-func compileL0(q, p term.Term) CodeCells {
-	qcode := compileL0Query(q)
-	pcode := compileL0Program(p)
+func compileL1(q term.Term, ps []term.Term) CodeCells {
+	qcode := compileL1Query(q)
+	pcode := compileL1Program(ps)
 
 	return CodeCells(append(qcode, pcode...))
 }
 
 // Compile a single query, and a program
-func compileL0Query(t term.Term) []CodeCell {
+func compileL1Query(t term.Term) []CodeCell {
 	code := []CodeCell{}
 
 	seen := map[int]bool{}
@@ -49,33 +53,39 @@ func compileL0Query(t term.Term) []CodeCell {
 }
 
 // Compile a single l0 program term
-func compileL0Program(t term.Term) []CodeCell {
+func compileL1Program(ts []term.Term) []CodeCell {
 	code := []CodeCell{}
+	labels := map[string]int{}
 
-	seen := map[int]bool{}
-	ts := make(chan streamToken)
-	go flattenp(ts, t)
+	for _, t := range ts {
+		labels[t.String()] = len(code)
 
-	for ft := range ts {
-		switch {
-		case ft.fn != "":
-			inst, str := GetStructure(term.Atom(ft.fn), ft.n, ft.xi)
-			seen[ft.xi] = true
-			code = append(code, CodeCell{inst, str})
-		case ft.fn == "":
-			if _, ok := seen[ft.xi]; ok {
-				inst, str := UnifyValue(ft.xi)
+		seen := map[int]bool{}
+		ts := make(chan streamToken)
+		go flattenp(ts, t)
+
+		for ft := range ts {
+			switch {
+			case ft.fn != "":
+				inst, str := GetStructure(term.Atom(ft.fn), ft.n, ft.xi)
+				seen[ft.xi] = true
 				code = append(code, CodeCell{inst, str})
-				continue
+			case ft.fn == "":
+				if _, ok := seen[ft.xi]; ok {
+					inst, str := UnifyValue(ft.xi)
+					code = append(code, CodeCell{inst, str})
+					continue
+				}
+				seen[ft.xi] = true
+				inst, str := UnifyVariable(ft.xi)
+				code = append(code, CodeCell{inst, str})
+			default:
+				panic("unknown term m0 type")
 			}
-			seen[ft.xi] = true
-			inst, str := UnifyVariable(ft.xi)
-			code = append(code, CodeCell{inst, str})
-		default:
-			panic("unknown term m0 type")
 		}
 	}
 
+	fmt.Printf("LABELS: %v\n", labels)
 	return code
 }
 

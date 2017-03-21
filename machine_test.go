@@ -16,92 +16,100 @@ package golorp
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/tcolgate/golorp/context"
 	"github.com/tcolgate/golorp/parse"
 	"github.com/tcolgate/golorp/scan"
+	"github.com/tcolgate/golorp/term"
 )
 
 type mtestL0 struct {
-	name string
 	q    string
 	p    string
 	fail bool
 }
 
 var mtestsL0 = []mtestL0{
-	{"query0",
+	/*
+		{
+			`p(Z,h(Z,W),f(W)).`,
+			`p(f(X),h(Y,f(a)),Y).`,
+			false,
+		},
+		{
+			`p(Z,h(Z,W)).`,
+			`p(f(X),h(Y,f(a)),Y).`,
+			true,
+		},
+		{
+			`p(Z,h(Z,a())).`,
+			`p(Z,h(Z,Z)).`,
+			false,
+		},
+		{
+			`p(A,h(A,a(),D)).`,
+			`p(a(),h(Z,B,B)).`,
+			false,
+		},
+		{
+			`a().`,
+			`a().`,
+			false,
+		},
+		{
+			`a().`,
+			`b().`,
+			true,
+		},
+		{
+			`a().`,
+			`X.`,
+			false,
+		},
+		{
+			`a(X,b()).`,
+			`a(Y,b()).`,
+			false,
+		},
+		{
+			`a(X,b()).`,
+			`a(c(),Y).`,
+			false,
+		},
+		{
+			`a(X,b(),X).`,
+			`a(b(),Y,Y).`,
+			false,
+		},
+		{
+			`X.`,
+			`Y.`,
+			false,
+		},
+		{
+			`a(X,f(Y,Y),Y).`,
+			`a(X,X,f(Y,Y)).`,
+			false,
+		},
+		{
+			`a(f(Z,Z),f(Z,Z,Z)).`,
+			`a(Y,Y).`,
+			true,
+		},
+	*/
+	{
 		`p(Z,h(Z,W),f(W)).`,
 		`p(f(X),h(Y,f(a)),Y).`,
-		false,
-	},
-	{"query1",
-		`p(Z,h(Z,W)).`,
-		`p(f(X),h(Y,f(a)),Y).`,
-		true,
-	},
-	{"query2",
-		`p(Z,h(Z,a())).`,
-		`p(Z,h(Z,Z)).`,
-		false,
-	},
-	{"query3",
-		`p(A,h(A,a(),D)).`,
-		`p(a(),h(Z,B,B)).`,
-		false,
-	},
-	{"query4",
-		`a().`,
-		`a().`,
-		false,
-	},
-	{"query5",
-		`a().`,
-		`b().`,
-		true,
-	},
-	{"query6",
-		`a().`,
-		`X.`,
-		false,
-	},
-	{"query7",
-		`a(X,b()).`,
-		`a(Y,b()).`,
-		false,
-	},
-	{"query8",
-		`a(X,b()).`,
-		`a(c(),Y).`,
-		false,
-	},
-	{"query9",
-		`a(X,b(),X).`,
-		`a(b(),Y,Y).`,
-		false,
-	},
-	{"query10",
-		`X.`,
-		`Y.`,
-		false,
-	},
-	{"query11",
-		`a(X,f(Y,Y),Y).`,
-		`a(X,X,f(Y,Y)).`,
-		false,
-	},
-	{"query12",
-		`a(f(Z,Z),f(Z,Z,Z)).`,
-		`a(Y,Y).`,
 		true,
 	},
 }
 
 func TestMachine0(t *testing.T) {
 	var ctx context.Context
-	for _, st := range mtestsL0 {
-		t.Run(st.name, func(t *testing.T) {
+	for i, st := range mtestsL0 {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			s := scan.New(ctx, "file.pl", bytes.NewBuffer([]byte(st.q)))
 			qt := parse.New("file.pl", s)
 
@@ -111,7 +119,7 @@ func TestMachine0(t *testing.T) {
 			q, _ := qt.NextTerm()
 			p, _ := pt.NextTerm()
 
-			cs := compileL0(q, p)
+			cs := compileL1(q, []term.Term{p})
 			m := NewMachine()
 
 			defer func() {
@@ -129,7 +137,7 @@ func TestMachine0(t *testing.T) {
 
 			if st.fail != m.Failed {
 				fmt.Println(m.String())
-				t.Fatalf("test failure, expected %v, got %v", st.fail, m.Failed)
+				t.Fatalf("%s failed, expected %v, got %v", t.Name(), st.fail, m.Failed)
 			}
 
 			fmt.Printf("%s", m)

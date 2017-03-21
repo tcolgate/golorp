@@ -20,6 +20,7 @@ import (
 	"github.com/tcolgate/golorp/context"
 	"github.com/tcolgate/golorp/parse"
 	"github.com/tcolgate/golorp/scan"
+	"github.com/tcolgate/golorp/term"
 )
 
 type testL0 struct {
@@ -71,7 +72,7 @@ func TestCompileL0(t *testing.T) {
 			q, _ := qt.NextTerm()
 			p, _ := pt.NextTerm()
 
-			cs := compileL0(q, p)
+			cs := compileL1(q, []term.Term{p})
 			if cs.String() != st.res {
 				t.Fatalf("expected: %s, got: %s", st.res, cs)
 			}
